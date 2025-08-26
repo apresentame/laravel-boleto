@@ -42,8 +42,7 @@ class Inter extends AbstractBoleto implements BoletoAPIContract
      *
      * @var string
      */
-    protected $especiesCodigo = [
-    ];
+    protected $especiesCodigo = [];
 
     /**
      * @var string
@@ -53,8 +52,7 @@ class Inter extends AbstractBoleto implements BoletoAPIContract
     /**
      * @var string[]
      */
-    protected $protectedFields = [
-    ];
+    protected $protectedFields = [];
 
     /**
      * @return string
@@ -366,42 +364,5 @@ class Inter extends AbstractBoleto implements BoletoAPIContract
     public function imprimeBoleto()
     {
         return $this->campoNossoNumero > 0;
-    }
-
-    /**
-     * @return mixed
-     * @throws ValidationException
-     */
-    public function alterarBoleto()
-    {
-        throw new ValidationException('Banco Inter só possui comando de registro.');
-    }
-
-    /**
-     * @return mixed
-     * @throws ValidationException
-     */
-    public function alterarDataDeVencimento()
-    {
-        throw new ValidationException('Banco Inter só possui comando de registro.');
-    }
-
-    /**
-     * @param $instrucao
-     * @return mixed
-     * @throws ValidationException
-     */
-    public function comandarInstrucao($instrucao)
-    {
-        throw new ValidationException('Banco Inter só possui comando de registro.');
-    }
-
-    /**
-     * @return mixed
-     * @throws ValidationException
-     */
-    public function baixarBoleto()
-    {
-        throw new ValidationException('Banco Inter só possui comando de registro.');
     }
 }
