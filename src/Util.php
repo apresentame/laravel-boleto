@@ -320,17 +320,74 @@ final class Util
     public static function normalizeChars($string)
     {
         $normalizeChars = [
-            'Á' => 'A', 'À' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Å' => 'A', 'Ä' => 'A', 'Æ' => 'AE', 'Ç' => 'C',
-            'É' => 'E', 'È' => 'E', 'Ê' => 'E', 'Ë' => 'E', 'Í' => 'I', 'Ì' => 'I', 'Î' => 'I', 'Ï' => 'I', 'Ð' => 'Eth',
-            'Ñ' => 'N', 'Ó' => 'O', 'Ò' => 'O', 'Ô' => 'O', 'Õ' => 'O', 'Ö' => 'O', 'Ø' => 'O',
-            'Ú' => 'U', 'Ù' => 'U', 'Û' => 'U', 'Ü' => 'U', 'Ý' => 'Y', 'Ŕ' => 'R',
+            'Á' => 'A',
+            'À' => 'A',
+            'Â' => 'A',
+            'Ã' => 'A',
+            'Å' => 'A',
+            'Ä' => 'A',
+            'Æ' => 'AE',
+            'Ç' => 'C',
+            'É' => 'E',
+            'È' => 'E',
+            'Ê' => 'E',
+            'Ë' => 'E',
+            'Í' => 'I',
+            'Ì' => 'I',
+            'Î' => 'I',
+            'Ï' => 'I',
+            'Ð' => 'Eth',
+            'Ñ' => 'N',
+            'Ó' => 'O',
+            'Ò' => 'O',
+            'Ô' => 'O',
+            'Õ' => 'O',
+            'Ö' => 'O',
+            'Ø' => 'O',
+            'Ú' => 'U',
+            'Ù' => 'U',
+            'Û' => 'U',
+            'Ü' => 'U',
+            'Ý' => 'Y',
+            'Ŕ' => 'R',
 
-            'á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a', 'å' => 'a', 'ä' => 'a', 'æ' => 'ae', 'ç' => 'c',
-            'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e', 'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i', 'ð' => 'eth',
-            'ñ' => 'n', 'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o', 'ø' => 'o',
-            'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u', 'ý' => 'y', 'ŕ' => 'r', 'ÿ' => 'y',
+            'á' => 'a',
+            'à' => 'a',
+            'â' => 'a',
+            'ã' => 'a',
+            'å' => 'a',
+            'ä' => 'a',
+            'æ' => 'ae',
+            'ç' => 'c',
+            'é' => 'e',
+            'è' => 'e',
+            'ê' => 'e',
+            'ë' => 'e',
+            'í' => 'i',
+            'ì' => 'i',
+            'î' => 'i',
+            'ï' => 'i',
+            'ð' => 'eth',
+            'ñ' => 'n',
+            'ó' => 'o',
+            'ò' => 'o',
+            'ô' => 'o',
+            'õ' => 'o',
+            'ö' => 'o',
+            'ø' => 'o',
+            'ú' => 'u',
+            'ù' => 'u',
+            'û' => 'u',
+            'ü' => 'u',
+            'ý' => 'y',
+            'ŕ' => 'r',
+            'ÿ' => 'y',
 
-            'ß' => 'sz', 'þ' => 'thorn', 'º' => '', 'ª' => '', '°' => '',
+            'ß' => 'sz',
+            'þ' => 'thorn',
+            'º' => '',
+            'ª' => '',
+            '°' => '',
         ];
 
         return preg_replace('/[^0-9a-zA-Z !+=*\-,.;:%@_]/', '', strtr($string, $normalizeChars));
@@ -510,9 +567,9 @@ final class Util
 
         // Verifica se o tipo é 'x' minúsculo e então retorna a string em minúsculas
         if ($tipo === 'Z') {
-            return strtolower(sprintf("%$left$sFill$tamanho$type", mb_substr($valor, 0, $tamanho)));
+            return strtolower(sprintf("%{$left}{$sFill}{$tamanho}{$type}", mb_substr($valor, 0, $tamanho)));
         } else {
-            return sprintf("%$left$sFill$tamanho$type", mb_substr($valor, 0, $tamanho));
+            return sprintf("%{$left}{$sFill}{$tamanho}{$type}", mb_substr($valor, 0, $tamanho));
         }
     }
 
@@ -556,9 +613,6 @@ final class Util
      */
     public static function fatorVencimentoBack($factor, $format = 'Y-m-d')
     {
-        if ($factor <= 4000) {
-            $factor = $factor + 9000;
-        }
         $date = Carbon::create(1997, 10, 7, 0, 0, 0)->addDays((int) $factor);
 
         return $format ? $date->format($format) : $date;
@@ -718,12 +772,50 @@ final class Util
                 self::adiciona($retorno[0], 27, 39, self::remove(18, 30, $remessa[0]));
                 self::adiciona($retorno[0], 47, 76, self::remove(47, 76, $remessa[0]));
                 break;
+            case BoletoContract::COD_BANCO_INTER:
+                // dd(self::remove(30, 37, $remessa[1]));
+                self::adiciona($retorno[0], 1, 1, '0'); // Identificação do registro
+                self::adiciona($retorno[0], 2, 2, '2'); // Identificação do arquivo retorno  
+                self::adiciona($retorno[0], 3, 9, 'RETORNO'); // Literal remessa
+                self::adiciona($retorno[0], 10, 11, '01'); // Código de serviço
+                self::adiciona($retorno[0], 12, 26, str_pad('COBRANCA', 15, ' ', STR_PAD_RIGHT)); // Literal serviço
+                self::adiciona($retorno[0], 27, 36, str_repeat(' ', 10)); // Campo em branco
+                self::adiciona($retorno[0], 37, 45, '006550547'); // Número da conta corrente
+                self::adiciona($retorno[0], 46, 46, '6'); // Dígito verificador da conta corrente
+                self::adiciona($retorno[0], 47, 76, self::remove(47, 76, $remessa[0])); // Nome da empresa
+                self::adiciona($retorno[0], 77, 79, $banco); // Código do banco na compensação
+                self::adiciona($retorno[0], 80, 94, str_pad('INTER', 15, ' ', STR_PAD_RIGHT)); // Nome do banco por extenso
+                self::adiciona($retorno[0], 95, 100, date('dmy')); // Data da gravação do arquivo
+                self::adiciona($retorno[0], 101, 394, str_repeat(' ', 294)); // Campo em branco
+                self::adiciona($retorno[0], 395, 400, self::remove(395, 400, $remessa[0])); // Número sequencial do registro
+                break;
+            case BoletoContract::COD_BANCO_BANCOOB:
+                self::adiciona($retorno[0], 1, 1, '0'); // Identificação do registro
+                self::adiciona($retorno[0], 2, 2, '2'); // Identificação do arquivo retorno  
+                self::adiciona($retorno[0], 3, 9, 'RETORNO'); // Literal remessa
+                self::adiciona($retorno[0], 10, 11, '01'); // Código de serviço
+                self::adiciona($retorno[0], 12, 26, str_pad('COBRANCA', 15, ' ', STR_PAD_RIGHT)); // Literal serviço
+                self::adiciona($retorno[0], 27, 46, str_pad('3249905801', 20, ' ', STR_PAD_LEFT)); // Código da empresa
+                self::adiciona($retorno[0], 47, 76, self::remove(47, 76, $remessa[0])); // Nome da empresa
+                self::adiciona($retorno[0], 77, 79, $banco); // Código do banco na compensação
+                self::adiciona($retorno[0], 80, 94, str_pad('BANCOOB', 15, ' ', STR_PAD_RIGHT)); // Nome do banco por extenso
+                self::adiciona($retorno[0], 95, 100, date('dmy')); // Data da gravação do arquivo
+                self::adiciona($retorno[0], 101, 104, '3249'); // Número sequencial do registro
+                self::adiciona($retorno[0], 105, 105, '0'); // Dígito verificador do número sequencial do registro
+                self::adiciona($retorno[0], 106, 112, str_pad('17678', 7, '0', STR_PAD_LEFT)); // Dígito verificador do número sequencial do registro
+                self::adiciona($retorno[0], 113, 113, '8'); // Dígito verificador do número sequencial do registro
+                // Continuar
+                self::adiciona($retorno[0], 395, 400, self::remove(395, 400, $remessa[0])); // Número sequencial do registro
             default:
                 throw new ValidationException("Banco: $banco, inválido");
         }
-        self::adiciona($retorno[0], 77, 79, $banco);
-        self::adiciona($retorno[0], 95, 100, date('dmy'));
-        self::adiciona($retorno[0], 395, 400, sprintf('%06s', count($retorno)));
+
+        // Para o Banco Inter, os campos já foram preenchidos no case específico
+        if ($banco !== BoletoContract::COD_BANCO_INTER) {
+            self::adiciona($retorno[0], 77, 79, $banco);
+            self::adiciona($retorno[0], 95, 100, date('dmy'));
+            self::adiciona($retorno[0], 395, 400, sprintf('%06s', count($retorno)));
+        }
 
         array_shift($remessa); // removo o header
         array_pop($remessa); // remove o trailer
@@ -733,14 +825,9 @@ final class Util
                 continue;
             }
             $i = count($retorno);
+
             $retorno[$i] = array_fill(0, 400, '0');
-            self::adiciona($retorno[$i], 1, 1, '1');
-            self::adiciona($retorno[$i], 109, 110, sprintf('%02s', $ocorrencia));
-            self::adiciona($retorno[$i], 111, 116, date('dmy'));
-            self::adiciona($retorno[$i], 153, 165, self::remove(127, 139, $detalhe));
-            self::adiciona($retorno[$i], 254, 266, self::remove(127, 139, $detalhe));
-            self::adiciona($retorno[$i], 147, 152, self::remove(121, 126, $detalhe));
-            self::adiciona($retorno[$i], 117, 126, self::remove(111, 120, $detalhe));
+
             self::adiciona($retorno[$i], 395, 400, sprintf('%06s', count($retorno)));
             switch ($banco) {
 
@@ -768,7 +855,43 @@ final class Util
                     self::adiciona($retorno[$i], 71, 82, self::remove(71, 82, $detalhe));
                     break;
                 case BoletoContract::COD_BANCO_ITAU:
-                    self::adiciona($retorno[$i], 86, 94, self::remove(63, 70, $detalhe));
+                    // Detalhe do retorno fake do Itaú - SEGMENTO T - CNAB 240
+                    self::adiciona($retorno[$i], 1, 3, '341'); // CÓDIGO DO BANCO
+                    self::adiciona($retorno[$i], 4, 7, '0001'); // CÓDIGO DO LOTE
+                    self::adiciona($retorno[$i], 8, 8, '3'); // TIPO DE REGISTRO (3=Detalhe)
+                    self::adiciona($retorno[$i], 9, 13, str_pad($i, 5, '0', STR_PAD_LEFT)); // N.º DO REGISTRO
+                    self::adiciona($retorno[$i], 14, 14, 'T'); // SEGMENTO (T=Obrigatório)
+                    self::adiciona($retorno[$i], 15, 15, 'N'); // BOLETO DDA (N=Não)
+                    self::adiciona($retorno[$i], 16, 17, '06'); // CÓD.DE OCORRÊNCIA (06=Crédito)
+                    self::adiciona($retorno[$i], 18, 18, '0'); // ZEROS
+                    self::adiciona($retorno[$i], 19, 22, '0001'); // AGÊNCIA
+                    self::adiciona($retorno[$i], 23, 30, '00000000'); // ZEROS
+                    self::adiciona($retorno[$i], 31, 35, '00001'); // CONTA
+                    self::adiciona($retorno[$i], 36, 36, '0'); // ZEROS
+                    self::adiciona($retorno[$i], 37, 37, '0'); // DAC
+                    self::adiciona($retorno[$i], 38, 40, '000'); // N.º DA CARTEIRA
+                    self::adiciona($retorno[$i], 41, 48, '00000001'); // NOSSO NÚMERO
+                    self::adiciona($retorno[$i], 49, 49, '0'); // DAC NOSSO NÚMERO
+                    self::adiciona($retorno[$i], 50, 57, str_repeat(' ', 8)); // BRANCOS
+                    self::adiciona($retorno[$i], 58, 58, '0'); // ZEROS
+                    self::adiciona($retorno[$i], 59, 68, 'FATURA001'); // SEU NÚMERO
+                    self::adiciona($retorno[$i], 69, 73, str_repeat(' ', 5)); // BRANCOS
+                    self::adiciona($retorno[$i], 74, 81, date('dmY')); // VENCIMENTO
+                    self::adiciona($retorno[$i], 82, 96, '00000000000010000'); // VALOR TÍTULO (R$ 100,00)
+                    self::adiciona($retorno[$i], 97, 99, '000'); // ZEROS
+                    self::adiciona($retorno[$i], 100, 104, '00001'); // AGÊNCIA COBRADORA
+                    self::adiciona($retorno[$i], 105, 105, '0'); // DAC AGÊNCIA COBRADORA
+                    self::adiciona($retorno[$i], 106, 130, str_pad('FATURA TESTE', 25, ' ', STR_PAD_RIGHT)); // USO DA EMPRESA
+                    self::adiciona($retorno[$i], 131, 132, '00'); // ZEROS
+                    self::adiciona($retorno[$i], 133, 133, '1'); // CÓDIGO DE INSCRIÇÃO (1=CPF)
+                    self::adiciona($retorno[$i], 134, 148, '12345678901'); // INSCRIÇÃO NÚMERO (CPF)
+                    self::adiciona($retorno[$i], 149, 178, str_pad('CLIENTE TESTE', 30, ' ', STR_PAD_RIGHT)); // NOME
+                    self::adiciona($retorno[$i], 179, 188, str_repeat(' ', 10)); // BRANCOS
+                    self::adiciona($retorno[$i], 189, 198, '0000000000'); // ZEROS
+                    self::adiciona($retorno[$i], 199, 213, '000000000000000'); // TARIFAS/CUSTAS
+                    self::adiciona($retorno[$i], 214, 221, '00000000'); // ERROS
+                    self::adiciona($retorno[$i], 222, 223, '01'); // CÓD. DE LIQUIDAÇÃO
+                    self::adiciona($retorno[$i], 224, 240, str_repeat(' ', 17)); // BRANCOS
                     break;
                 case BoletoContract::COD_BANCO_HSBC:
                     self::adiciona($retorno[$i], 63, 73, self::remove(63, 73, $detalhe));
@@ -781,15 +904,70 @@ final class Util
                     self::adiciona($retorno[$i], 63, 72, self::remove(111, 120, $detalhe));
                     self::adiciona($retorno[$i], 18, 30, self::remove(18, 30, $detalhe));
                     break;
+                case BoletoContract::COD_BANCO_INTER:
+                    self::adiciona($retorno[$i], 1, 1, '1'); // Identificação do registro
+                    self::adiciona($retorno[$i], 2, 3, '02'); // Tipo de inscrição empresa (01=CPF, 02=CNPJ)
+                    self::adiciona($retorno[$i], 4, 17, str_pad('37456158000180', 14, '0', STR_PAD_RIGHT)); // Número inscrição da empresa
+                    self::adiciona($retorno[$i], 18, 20, '000'); // Zeros
+                    self::adiciona($retorno[$i], 21, 23, self::remove(21, 23, $detalhe)); // Carteira
+                    self::adiciona($retorno[$i], 24, 27, '0001'); // Agência da empresa beneficiária no Inter
+                    self::adiciona($retorno[$i], 28, 37, self::remove(28, 37, $detalhe)); // Número da conta corrente da empresa
+                    self::adiciona($retorno[$i], 38, 62, str_pad(self::remove(38, 62, $detalhe), 25, ' ', STR_PAD_RIGHT)); // Número controle do participante
+                    self::adiciona($retorno[$i], 63, 70, '00000000'); // Zeros
+                    self::adiciona($retorno[$i], 71, 81, str_pad(self::remove(38, 62, $detalhe), 11, '0', STR_PAD_LEFT)); // Nosso número
+                    self::adiciona($retorno[$i], 82, 86, str_repeat(' ', 5)); // Campo em branco
+                    self::adiciona($retorno[$i], 87, 89, '112'); // Carteira
+                    self::adiciona($retorno[$i], 90, 91, '02'); // Identificação de ocorrência
+                    self::adiciona($retorno[$i], 92, 97, date('dmy')); // Data da ocorrência no banco
+                    self::adiciona($retorno[$i], 98, 107, str_pad(self::remove(111, 120, $detalhe), 10, ' ', STR_PAD_RIGHT)); // Número do documento "Seu número"
+                    self::adiciona($retorno[$i], 108, 118, str_pad(self::remove(38, 62, $detalhe), 11, '0', STR_PAD_LEFT)); // Nosso número no banco
+                    self::adiciona($retorno[$i], 119, 124, self::remove(121, 126, $detalhe)); // Data do vencimento do título
+                    self::adiciona($retorno[$i], 125, 137, self::remove(127, 139, $detalhe)); // Valor do título
+                    self::adiciona($retorno[$i], 138, 140, '077'); // Código do banco na compensação
+                    self::adiciona($retorno[$i], 141, 144, '0001'); // Agência da empresa beneficiária no Inter
+                    self::adiciona($retorno[$i], 145, 146, '01'); // Espécie do título
+                    self::adiciona($retorno[$i], 147, 159, '             '); // Campo em branco
+                    self::adiciona($retorno[$i], 160, 172, str_repeat('0', 13)); // Valor pago (mesmo valor do título)
+                    self::adiciona($retorno[$i], 173, 178, date('dmy')); // Data do crédito
+                    self::adiciona($retorno[$i], 179, 181, str_repeat(' ', 3)); // Campo em branco
+                    self::adiciona($retorno[$i], 182, 221, str_pad(self::remove(237, 271, $detalhe), 40, ' ', STR_PAD_RIGHT)); // Nome do pagador
+                    self::adiciona($retorno[$i], 222, 226, str_repeat(' ', 5)); // Campo em branco
+                    self::adiciona($retorno[$i], 227, 240, str_pad(self::remove(223, 236, $detalhe), 14, '0', STR_PAD_LEFT)); // CPF/CNPJ do pagador
+                    self::adiciona($retorno[$i], 241, 380, str_repeat(' ', 140)); // Campo em branco
+                    self::adiciona($retorno[$i], 381, 394, str_pad(self::remove(1, 1, $detalhe), 14, ' ', STR_PAD_LEFT)); // Campo em branco
+                    self::adiciona($retorno[$i], 395, 400, str_pad(self::remove(395, 400, $detalhe), 5, ' ', STR_PAD_LEFT)); // Campo em branco
+                    break;
                 default:
                     throw new ValidationException("Banco: $banco, inválido");
             }
         }
 
-        $i = count($retorno);
-        $retorno[$i] = array_fill(0, 400, '0');
-        self::adiciona($retorno[$i], 1, 1, '9');
-        self::adiciona($retorno[$i], 395, 400, sprintf('%06s', count($retorno)));
+
+        if ($banco === BoletoContract::COD_BANCO_INTER) {
+            $i = count($retorno);
+            $retorno[$i] = array_fill(0, 400, ' '); // Preenche com espaços para o trailer
+            self::adiciona($retorno[$i], 1, 1, '9'); // Identificação do registro
+            self::adiciona($retorno[$i], 2, 2, '2'); // Identificação de retorno
+            self::adiciona($retorno[$i], 3, 4, '01'); // Identificação tipo de registro
+            self::adiciona($retorno[$i], 5, 7, '077'); // Código do banco na compensação
+            self::adiciona($retorno[$i], 8, 17, str_repeat(' ', 10)); // Campo em branco
+            self::adiciona($retorno[$i], 18, 25, str_pad($i - 1, 8, '0', STR_PAD_LEFT)); // Quantidade de registros Ocorrência 01
+            self::adiciona($retorno[$i], 26, 57, str_repeat(' ', 32)); // Campo em branco
+            self::adiciona($retorno[$i], 58, 62, str_pad($i - 1, 5, '0', STR_PAD_LEFT)); // Quantidade de registros Ocorrência 02
+            self::adiciona($retorno[$i], 63, 74, str_pad(1800000, 12, '0', STR_PAD_LEFT)); // Valor de registros Ocorrência 02
+            self::adiciona($retorno[$i], 75, 86, str_repeat(' ', 12)); // Campo em branco
+            self::adiciona($retorno[$i], 87, 91, str_pad(0, 5, '0', STR_PAD_LEFT)); // Quantidade de registros Ocorrência 03
+            self::adiciona($retorno[$i], 92, 115, str_repeat(' ', 24)); // Campo em branco
+            self::adiciona($retorno[$i], 116, 120, str_pad(0, 5, '0', STR_PAD_LEFT)); // Quantidade de registros Ocorrência 04
+            self::adiciona($retorno[$i], 121, 132, str_pad(0, 12, '0', STR_PAD_LEFT)); // Valor dos registros Ocorrência 04
+            self::adiciona($retorno[$i], 133, 394, str_repeat(' ', 262)); // Campo em branco
+            self::adiciona($retorno[$i], 395, 400, sprintf('%06d', count($retorno))); // Número sequencial de registros
+        } else {
+            $i = count($retorno);
+            $retorno[$i] = array_fill(0, 400, '0');
+            self::adiciona($retorno[$i], 1, 1, '9');
+            self::adiciona($retorno[$i], 395, 400, sprintf('%06s', count($retorno)));
+        }
 
         $retorno = array_map(function ($a) {
             return implode('', $a);
@@ -842,16 +1020,16 @@ final class Util
      * @param int $i
      * @param int $f
      * @param $value
-     * @param int $tamanhoLinha
+     *
      * @return array
      * @throws ValidationException
      */
-    public static function adiciona(&$line, $i, $f, $value, $tamanhoLinha = 400)
+    public static function adiciona(&$line, $i, $f, $value)
     {
         $i--;
 
-        if ($f > $tamanhoLinha) {
-            throw new ValidationException('$ini ou $fim ultrapassam o limite máximo de ' . $tamanhoLinha);
+        if (($i > 398 || $f > 400) && ($i != 401 && $f != 444)) {
+            throw new ValidationException('$ini ou $fim ultrapassam o limite máximo de 400');
         }
 
         if ($f < $i) {
@@ -899,7 +1077,7 @@ final class Util
     /**
      * @param $file
      *
-     * @return array
+     * @return array|bool
      */
     public static function file2array($file)
     {
@@ -1073,20 +1251,16 @@ final class Util
             BoletoContract::COD_BANCO_BTG       => 'Banco\\Btg',
             BoletoContract::COD_BANCO_UNICRED   => 'Banco\\Unicred',
             BoletoContract::COD_BANCO_BRADESCO  => 'Banco\\Bradesco',
-            BoletoContract::COD_BANCO_ABC       => 'Banco\\Abc',
-            BoletoContract::COD_BANCO_GRAFENO   => 'Banco\\Grafeno',
             BoletoContract::COD_BANCO_FIBRA     => 'Banco\\Fibra',
             BoletoContract::COD_BANCO_ITAU      => 'Banco\\Itau',
             BoletoContract::COD_BANCO_HSBC      => 'Banco\\Hsbc',
             BoletoContract::COD_BANCO_DELCRED   => 'Banco\\Delbank',
             BoletoContract::COD_BANCO_PINE      => 'Banco\\Pine',
             BoletoContract::COD_BANCO_OURINVEST => 'Banco\\Ourinvest',
-            BoletoContract::COD_BANCO_BV        => 'Banco\\Bv',
             BoletoContract::COD_BANCO_SICREDI   => 'Banco\\Sicredi',
             BoletoContract::COD_BANCO_BANCOOB   => 'Banco\\Bancoob',
             BoletoContract::COD_BANCO_CRESOL    => 'Banco\\Cresol',
             BoletoContract::COD_BANCO_AILOS     => 'Banco\\Ailos',
-            BoletoContract::COD_BANCO_DAYCOVAL  => 'Banco\\Daycoval',
         ];
 
         if (array_key_exists($banco, $aBancos)) {
@@ -1105,35 +1279,13 @@ final class Util
      */
     public static function addPessoa(&$property, $obj)
     {
-        if (is_subclass_of($obj, "Eduardokum\LaravelBoleto\Contracts\Pessoa")) {
+        if (is_subclass_of($obj, 'Eduardokum\\LaravelBoleto\\Contracts\\Pessoa')) {
             $property = $obj;
 
             return $obj;
         } elseif (is_array($obj)) {
             $obj = new Pessoa($obj);
             $property = $obj;
-
-            return $obj;
-        }
-        throw new ValidationException('Objeto inválido, somente Pessoa e Array');
-    }
-
-    /**
-     * @param $property
-     * @param $obj
-     *
-     * @return NotaFiscal
-     * @throws ValidationException
-     */
-    public static function addNotaFiscal(&$property, $obj)
-    {
-        if (is_subclass_of($obj, "Eduardokum\LaravelBoleto\Contracts\NotaFiscal")) {
-            $property[] = $obj;
-
-            return $obj;
-        } elseif (is_array($obj)) {
-            $obj = new NotaFiscal($obj);
-            $property[] = $obj;
 
             return $obj;
         }
@@ -1196,10 +1348,12 @@ final class Util
         }
         for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
         if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) {
+
             return false;
         }
         for ($s = 11, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
         if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) {
+
             return false;
         }
 
@@ -1219,10 +1373,12 @@ final class Util
         }
         for ($i = 0, $n = 0; $i < 12; $n += $c[$i] * $b[++$i]);
         if ($c[12] != ((($n %= 11) < 2) ? 0 : 11 - $n)) {
+
             return false;
         }
         for ($i = 0, $n = 0; $i <= 12; $n += $c[$i] * $b[$i++]);
         if ($c[13] != ((($n %= 11) < 2) ? 0 : 11 - $n)) {
+
             return false;
         }
 
