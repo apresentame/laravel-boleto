@@ -28,6 +28,7 @@ class Inter extends AbstractRetorno implements RetornoCnab400
         '03' => 'Erro',
         '06' => 'Pago',
         '07' => 'Baixado',
+        '14' => 'Alteração de data de vencimento'
     ];
 
     /**
@@ -35,9 +36,7 @@ class Inter extends AbstractRetorno implements RetornoCnab400
      *
      * @var array
      */
-    private $rejeicoes = [
-
-    ];
+    private $rejeicoes = [];
 
     /**
      * Roda antes dos metodos de processar
