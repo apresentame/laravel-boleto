@@ -129,14 +129,14 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
         $this->add(8, 8, self::TIPO_REGISTRO); // Tipo de registro
         $this->add(9, 17, self::CAMPO_BRANCO); // Campo em branco
         $this->add(18, 18, self::TIPO_DOCUMENTO_EMPRESA); // Tipo de documento da empresa (CNPJ)
-        $this->add(19, 32, Util::onlyNumbers($this->getBeneficiario()->getDocumento())); // CPF/CNPJ da empresa
+        $this->add(19, 32, Util::onlyNumbers($this->getPagador()->getDocumento())); // CPF/CNPJ da empresa
         $this->add(33, 52, self::CAMPO_BRANCO); // Campo em branco
         $this->add(53, 57, self::AGENCIA_EMPRESA); // Agência mantenedora da conta da empresa
         $this->add(58, 58, self::AGENCIA_DV_EMPRESA); // Dígito verificador da agência
         $this->add(59, 70, Util::onlyNumbers($this->getConta())); // Número da conta corrente da empresa
         $this->add(71, 71, $this->getContaDv()); // Dígito verificador da conta
         $this->add(72, 72, self::CAMPO_BRANCO); // Campo em branco
-        $this->add(73, 102, Util::formatCnab('X', $this->getBeneficiario()->getNome(), 30)); // Nome da empresa
+        $this->add(73, 102, Util::formatCnab('X', $this->getPagador()->getNome(), 30)); // Nome da empresa
         $this->add(103, 132, self::NOME_BANCO); // Nome do banco
         $this->add(133, 142, self::CAMPO_BRANCO); // Campo em branco
         $this->add(143, 143, self::CODIGO_REMESSA); // Código de remessa
@@ -169,22 +169,22 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
         $this->add(14, 16, self::VERSAO_LAYOUT_LOTE); // Número da versão do layout do Lote
         $this->add(17, 17, self::CAMPO_BRANCO); // Campo em branco
         $this->add(18, 18, self::TIPO_DOCUMENTO_EMPRESA); // Tipo de documento da empresa (CNPJ)
-        $this->add(19, 32, Util::onlyNumbers($this->getBeneficiario()->getDocumento())); // CPF/CNPJ da empresa
+        $this->add(19, 32, Util::onlyNumbers($this->getPagador()->getDocumento())); // CPF/CNPJ da empresa
         $this->add(33, 52, self::CAMPO_BRANCO); // Campo em branco
         $this->add(53, 57, self::AGENCIA_EMPRESA); // Agência mantenedora da conta da empresa
         $this->add(58, 58, self::AGENCIA_DV_EMPRESA); // Dígito verificador da agência
         $this->add(59, 70, Util::onlyNumbers($this->getConta())); // Número da conta corrente da empresa
         $this->add(71, 71, $this->getContaDv()); // Dígito verificador da conta
         $this->add(72, 72, self::CAMPO_BRANCO); // Campo em branco
-        $this->add(73, 102, Util::formatCnab('X', $this->getBeneficiario()->getNome(), 30)); // Nome da empresa
+        $this->add(73, 102, Util::formatCnab('X', $this->getPagador()->getNome(), 30)); // Nome da empresa
         $this->add(103, 142, self::CAMPO_BRANCO); // Informação genérica opcional
-        $this->add(143, 172, Util::formatCnab('X', $this->getBeneficiario()->getEndereco(), 30)); // Nome da Rua, Av, Pça, Etc.
+        $this->add(143, 172, Util::formatCnab('X', $this->getPagador()->getEndereco(), 30)); // Nome da Rua, Av, Pça, Etc.
         $this->add(173, 177, self::CAMPO_BRANCO); // Número do local da empresa
         $this->add(178, 192, self::CAMPO_BRANCO); // Casa, Apto, Sala, Etc.
-        $this->add(193, 212, Util::formatCnab('X', $this->getBeneficiario()->getCidade(), 20)); // Nome da cidade da empresa
-        $this->add(213, 217, Util::onlyNumbers($this->getBeneficiario()->getCep())); // CEP da empresa
+        $this->add(193, 212, Util::formatCnab('X', $this->getPagador()->getCidade(), 20)); // Nome da cidade da empresa
+        $this->add(213, 217, Util::onlyNumbers($this->getPagador()->getCep())); // CEP da empresa
         $this->add(218, 220, self::CAMPO_BRANCO); // Complemento do CEP
-        $this->add(221, 222, $this->getBeneficiario()->getUf()); // Sigla do estado da empresa
+        $this->add(221, 222, $this->getPagador()->getUf()); // Sigla do estado da empresa
         $this->add(223, 230, self::CAMPO_BRANCO); // Campo em branco
         $this->add(231, 240, self::CAMPO_BRANCO); // Códigos das ocorrências para retorno
 

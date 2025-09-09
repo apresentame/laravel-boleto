@@ -1,6 +1,6 @@
 <?php
 
-namespace Eduardokum\LaravelBoleto\Boleto;
+namespace Eduardokum\LaravelBoleto\Pagamento;
 
 use Exception;
 use Throwable;
@@ -25,9 +25,9 @@ use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto as BoletoContract;
 use Eduardokum\LaravelBoleto\Contracts\NotaFiscal as NotaFiscalContract;
 
 /**
- * Class AbstractBoleto
+ * Class AbstractPagamento
  */
-abstract class AbstractBoleto implements BoletoContract
+abstract class AbstractPagamento implements PagamentoContract
 {
     use MagicTrait;
 
@@ -624,7 +624,7 @@ abstract class AbstractBoleto implements BoletoContract
      *
      * @param $beneficiario
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function setBeneficiario($beneficiario)
@@ -2137,9 +2137,9 @@ abstract class AbstractBoleto implements BoletoContract
             if (! $this->getPixChaveTipo()) {
                 throw new ValidationException('Informado chave de Pix porém não foi informado o tipo de chave');
             }
-//            if (! $this->getID()) {
-//                throw new ValidationException('ID necessita ser informado para geração da cobrança');
-//            }
+            //            if (! $this->getID()) {
+            //                throw new ValidationException('ID necessita ser informado para geração da cobrança');
+            //            }
 
             switch ($this->getPixChaveTipo()) {
                 case self::TIPO_CHAVEPIX_CPF:

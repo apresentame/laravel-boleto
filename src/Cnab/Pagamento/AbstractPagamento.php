@@ -156,6 +156,13 @@ abstract class AbstractPagamento
     protected $beneficiario;
 
     /**
+     * Entidade pagadora (de quem se cobra o boleto)
+     *
+     * @var PessoaContract
+     */
+    protected $pagador;
+
+    /**
      * Construtor
      *
      * @param array $params Parâmetros iniciais para construção do objeto
@@ -279,6 +286,28 @@ abstract class AbstractPagamento
     {
         Util::addPessoa($this->beneficiario, $beneficiario);
         $this->beneficiario->setTipo(Pessoa::TIPO_BENEFICIARIO);
+
+        return $this;
+    }
+
+    /**
+     * @return PessoaContract
+     */
+    public function getPagador()
+    {
+        return $this->pagador;
+    }
+
+    /**
+     * @param $pagador
+     *
+     * @return AbstractPagamento
+     * @throws ValidationException
+     */
+    public function setPagador($pagador)
+    {
+        Util::addPessoa($this->pagador, $pagador);
+        $this->pagador->setTipo(Pessoa::TIPO_PAGADOR);
 
         return $this;
     }
