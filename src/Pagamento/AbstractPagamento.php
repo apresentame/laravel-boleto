@@ -18,10 +18,10 @@ use chillerlan\QRCode\Output\QROutputInterface;
 use Eduardokum\LaravelBoleto\Boleto\Render\Pdf;
 use Eduardokum\LaravelBoleto\Boleto\Render\Html;
 use Eduardokum\LaravelBoleto\Boleto\Render\PdfCaixa;
-use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto;
+use Eduardokum\LaravelBoleto\Contracts\Pagamento\Pagamento;
 use Eduardokum\LaravelBoleto\Exception\ValidationException;
 use Eduardokum\LaravelBoleto\Contracts\Pessoa as PessoaContract;
-use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto as BoletoContract;
+use Eduardokum\LaravelBoleto\Contracts\Pagamento\Pagamento as PagamentoContract;
 use Eduardokum\LaravelBoleto\Contracts\NotaFiscal as NotaFiscalContract;
 
 /**
@@ -391,7 +391,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @var int
      */
-    public $status = BoletoContract::STATUS_REGISTRO;
+    public $status = PagamentoContract::STATUS_REGISTRO;
 
     /**
      * @var int
@@ -449,7 +449,7 @@ abstract class AbstractPagamento implements PagamentoContract
     private $pixChaveTipo = null;
 
     /**
-     * AbstractBoleto constructor.
+     * AbstractPagamento constructor.
      *
      * @param array $params
      */
@@ -516,7 +516,7 @@ abstract class AbstractPagamento implements PagamentoContract
 
     /**
      * @param $id
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setID($id)
     {
@@ -538,7 +538,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $agencia
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setAgencia($agencia)
     {
@@ -562,7 +562,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $agenciaDv
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setAgenciaDv($agenciaDv)
     {
@@ -586,7 +586,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $carteira
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function setCarteira($carteira)
@@ -650,7 +650,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param $notasFiscais
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function setNotasFiscais($notasFiscais)
@@ -712,7 +712,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $conta
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setConta($conta)
     {
@@ -726,7 +726,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $conta
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setContaCorrente($conta)
     {
@@ -750,7 +750,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $contaDv
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setContaDv($contaDv)
     {
@@ -764,7 +764,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $contaDv
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setContaCorrenteDv($contaDv)
     {
@@ -788,7 +788,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param Carbon $dataVencimento
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setDataVencimento(Carbon $dataVencimento)
     {
@@ -812,7 +812,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param Carbon $dataDesconto
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setDataDesconto(Carbon $dataDesconto)
     {
@@ -836,7 +836,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param Carbon $dataDocumento
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setDataDocumento(Carbon $dataDocumento)
     {
@@ -870,7 +870,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $aceite
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setAceite($aceite)
     {
@@ -894,7 +894,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $especieDoc
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setEspecieDoc($especieDoc)
     {
@@ -941,7 +941,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param int $numeroDocumento
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setNumeroDocumento($numeroDocumento)
     {
@@ -965,7 +965,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param int $numero
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setNumero($numero)
     {
@@ -989,7 +989,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $numeroControle
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setNumeroControle($numeroControle)
     {
@@ -1013,7 +1013,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $usoBanco
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setUsoBanco($usoBanco)
     {
@@ -1037,7 +1037,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $chaveNfe
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function setChaveNfe($chaveNfe)
@@ -1076,7 +1076,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param Carbon $dataProcessamento
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setDataProcessamento(Carbon $dataProcessamento)
     {
@@ -1100,7 +1100,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $instrucao
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function addInstrucao($instrucao)
@@ -1118,7 +1118,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param array $instrucoes
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function setInstrucoes(array $instrucoes)
@@ -1146,7 +1146,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param array $instrucoes_impressao
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function setInstrucoesImpressao(array $instrucoes_impressao)
@@ -1178,7 +1178,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $descricaoDemonstrativo
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function addDescricaoDemonstrativo($descricaoDemonstrativo)
@@ -1196,7 +1196,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param array $descricaoDemonstrativo
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function setDescricaoDemonstrativo(array $descricaoDemonstrativo)
@@ -1224,7 +1224,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $localPagamento
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setLocalPagamento($localPagamento)
     {
@@ -1248,7 +1248,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param int $moeda
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setMoeda($moeda)
     {
@@ -1272,7 +1272,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param $pagador
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function setPagador($pagador)
@@ -1298,7 +1298,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param $sacadorAvalista
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function setSacadorAvalista($sacadorAvalista)
@@ -1324,7 +1324,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $valor
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setValor($valor)
     {
@@ -1348,7 +1348,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $desconto
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setDesconto($desconto)
     {
@@ -1372,7 +1372,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param float $multa
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setMulta($multa)
     {
@@ -1396,7 +1396,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param float $juros
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setJuros($juros)
     {
@@ -1434,7 +1434,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param int $jurosApos
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setJurosApos($jurosApos)
     {
@@ -1458,7 +1458,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param  int $multaApos
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setMultaApos($multaApos)
     {
@@ -1482,7 +1482,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param int $diasProtesto
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function setDiasProtesto($diasProtesto)
@@ -1513,7 +1513,7 @@ abstract class AbstractPagamento implements PagamentoContract
      * 0 = Não protestar, 1 = Dias corridos, 2 = Dias úteis, 3 = Negativar dias corridos, 4 = Não negativar
      * @param int $tipoProtesto
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws Exception
      */
     public function setTipoProtesto($tipoProtesto)
@@ -1575,7 +1575,7 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param string $logo
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setLogo($logo)
     {
@@ -1626,11 +1626,11 @@ abstract class AbstractPagamento implements PagamentoContract
     /**
      * Marca o boleto para ser alterado no banco
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function alterarBoleto()
     {
-        $this->status = BoletoContract::STATUS_ALTERACAO;
+        $this->status = PagamentoContract::STATUS_ALTERACAO;
 
         return $this;
     }
@@ -1638,11 +1638,11 @@ abstract class AbstractPagamento implements PagamentoContract
     /**
      * Marca o boleto para alterar data vecimento no banco
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function alterarDataDeVencimento()
     {
-        $this->status = BoletoContract::STATUS_ALTERACAO_DATA;
+        $this->status = PagamentoContract::STATUS_ALTERACAO_DATA;
 
         return $this;
     }
@@ -1652,11 +1652,11 @@ abstract class AbstractPagamento implements PagamentoContract
      *
      * @param $instrucao
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function comandarInstrucao($instrucao)
     {
-        $this->status = BoletoContract::STATUS_CUSTOM;
+        $this->status = PagamentoContract::STATUS_CUSTOM;
         $this->status_custom = $instrucao;
 
         return $this;
@@ -1667,17 +1667,17 @@ abstract class AbstractPagamento implements PagamentoContract
      */
     public function getComando()
     {
-        return $this->status == Boleto::STATUS_CUSTOM ? $this->status_custom : null;
+        return $this->status == Pagamento::STATUS_CUSTOM ? $this->status_custom : null;
     }
 
     /**
      * Marca o boleto para ser baixado no banco
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function baixarBoleto()
     {
-        $this->status = BoletoContract::STATUS_BAIXA;
+        $this->status = PagamentoContract::STATUS_BAIXA;
 
         return $this;
     }
@@ -1831,7 +1831,7 @@ abstract class AbstractPagamento implements PagamentoContract
     {
         $codigoBanco = $this->getCodigoBanco();
 
-        $semX = [BoletoContract::COD_BANCO_CEF, BoletoContract::COD_BANCO_AILOS];
+        $semX = [PagamentoContract::COD_BANCO_CEF, PagamentoContract::COD_BANCO_AILOS];
         $x10 = in_array($codigoBanco, $semX) ? 0 : 'X';
 
         return $codigoBanco . '-' . Util::modulo11($codigoBanco, 2, 9, 0, $x10);
@@ -1883,7 +1883,7 @@ abstract class AbstractPagamento implements PagamentoContract
     /**
      * @param string $situacao
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setSituacao($situacao)
     {
@@ -1903,7 +1903,7 @@ abstract class AbstractPagamento implements PagamentoContract
     /**
      * @param Carbon $dataSituacao
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setDataSituacao($dataSituacao)
     {
@@ -1923,7 +1923,7 @@ abstract class AbstractPagamento implements PagamentoContract
     /**
      * @param mixed $valorRecebido
      *
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setValorRecebido($valorRecebido)
     {
@@ -1950,7 +1950,7 @@ abstract class AbstractPagamento implements PagamentoContract
 
     /**
      * @param null $pixChave
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      */
     public function setPixChave($pixChave)
     {
@@ -1969,7 +1969,7 @@ abstract class AbstractPagamento implements PagamentoContract
 
     /**
      * @param null $pixChaveTipo
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function setPixChaveTipo($pixChaveTipo)
@@ -1992,7 +1992,7 @@ abstract class AbstractPagamento implements PagamentoContract
 
     /**
      * @param string $qrCodeStyle
-     * @return AbstractBoleto
+     * @return AbstractPagamento
      * @throws ValidationException
      */
     public function setQrCodeStyle($qrCodeStyle)
