@@ -5,6 +5,7 @@ namespace Eduardokum\LaravelBoleto\Cnab\Pagamento\Cnab240\Banco;
 use Eduardokum\LaravelBoleto\Cnab\Pagamento\Cnab240\AbstractPagamento;
 use Eduardokum\LaravelBoleto\Contracts\Cnab\Pagamento as PagamentoRemessaContract;
 use Eduardokum\LaravelBoleto\Contracts\Pagamento\Pagamento as PagamentoContract;
+use Eduardokum\LaravelBoleto\Pagamento\Banco\Inter as BancoInter;
 use Eduardokum\LaravelBoleto\Util;
 
 /**
@@ -349,10 +350,10 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
     /**
      * Adiciona um segmento A para TED
      *
-     * @param array $dados
+     * @param BancoInter $pagamento
      * @return $this
      */
-    public function segmentoA($dados)
+    public function segmentoA($pagamento)
     {
         $this->iniciaDetalhe();
 
@@ -364,25 +365,25 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
         $this->add(15, 15, self::TIPO_MOVIMENTO); // Tipo de movimento
         $this->add(16, 17, self::CODIGO_INSTRUCAO_MOVIMENTO); // Código da instrução para movimento
         $this->add(18, 20, self::CODIGO_CAMARA_CENTRALIZADORA); // Código da câmara centralizadora
-        $this->add(21, 23, str_pad($dados['banco_favorecido'] ?? '0', 3, '0', STR_PAD_LEFT)); // [Favorecido] Código do banco
-        $this->add(24, 28, str_pad($dados['agencia_favorecido'] ?? '0', 5, '0', STR_PAD_LEFT)); // [Favorecido] Agência mantenedora da conta
-        $this->add(29, 29, $dados['agencia_dv_favorecido'] ?? '0'); // [Favorecido] Dígito verificador da agência
-        $this->add(30, 41, str_pad($dados['conta_favorecido'] ?? '0', 12, '0', STR_PAD_LEFT)); // [Favorecido] Número da conta corrente
-        $this->add(42, 42, $dados['conta_dv_favorecido'] ?? '0'); // [Favorecido] Dígito verificador da conta
+        $this->add(21, 23, str_pad($pagamento['banco_favorecido'] ?? '0', 3, '0', STR_PAD_LEFT)); // [Favorecido] Código do banco
+        $this->add(24, 28, str_pad($pagamento['agencia_favorecido'] ?? '0', 5, '0', STR_PAD_LEFT)); // [Favorecido] Agência mantenedora da conta
+        $this->add(29, 29, $pagamento['agencia_dv_favorecido'] ?? '0'); // [Favorecido] Dígito verificador da agência
+        $this->add(30, 41, str_pad($pagamento['conta_favorecido'] ?? '0', 12, '0', STR_PAD_LEFT)); // [Favorecido] Número da conta corrente
+        $this->add(42, 42, $pagamento['conta_dv_favorecido'] ?? '0'); // [Favorecido] Dígito verificador da conta
         $this->add(43, 43, self::CAMPO_BRANCO); // Campo em branco
-        $this->add(44, 73, Util::formatCnab('X', $dados['nome_favorecido'] ?? '', 30)); // [Favorecido] Nome
-        $this->add(74, 93, Util::formatCnab('X', $dados['numero_documento'] ?? '', 20)); // Número do documento atribuído para empresa
-        $dataPagamento = isset($dados['data_pagamento']) ? date('dmY', strtotime($dados['data_pagamento'])) : date('dmY');
+        $this->add(44, 73, Util::formatCnab('X', $pagamento['nome_favorecido'] ?? '', 30)); // [Favorecido] Nome
+        $this->add(74, 93, Util::formatCnab('X', $pagamento['numero_documento'] ?? '', 20)); // Número do documento atribuído para empresa
+        $dataPagamento = isset($pagamento['data_pagamento']) ? date('dmY', strtotime($pagamento['data_pagamento'])) : date('dmY');
         $this->add(94, 101, $dataPagamento); // Data do pagamento
         $this->add(102, 104, self::TIPO_MOEDA); // Tipo da moeda
         $this->add(105, 119, self::QUANTIDADE_MOEDA); // Quantidade da moeda
-        $valor = isset($dados['valor']) ? number_format($dados['valor'], 2, '', '') : '000000000000000';
+        $valor = isset($pagamento['valor']) ? number_format($pagamento['valor'], 2, '', '') : '000000000000000';
         $this->add(120, 134, str_pad($valor, 15, '0', STR_PAD_LEFT)); // Valor do pagamento
         $this->add(135, 154, self::CAMPO_BRANCO); // Número do documento atribuído pelo banco
         $this->add(155, 162, self::DATA_RETORNO_VAZIA); // Data real da efetivação do pagamento (Retorno)
         $this->add(163, 177, self::VALOR_RETORNO_VAZIO); // Valor real da efetivação do pagamento (Retorno)
         $this->add(178, 199, self::CAMPO_BRANCO); // Campo em branco
-        $this->add(200, 201, $dados['tipo_conta'] ?? self::TIPO_CONTA_CORRENTE); // [Identificação do Pagamento] Tipo de conta
+        $this->add(200, 201, $pagamento['tipo_conta'] ?? self::TIPO_CONTA_CORRENTE); // [Identificação do Pagamento] Tipo de conta
         $this->add(202, 230, self::CAMPO_BRANCO); // Campo em branco (conforme Item 27 da imagem)
         $this->add(231, 240, self::CAMPO_BRANCO); // Códigos das ocorrências para retorno
 
@@ -393,10 +394,10 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
     /**
      * Adiciona um segmento A para PIX
      *
-     * @param array $dados
+     * @param BancoInter $pagamento
      * @return $this
      */
-    public function segmentoAPix($dados)
+    public function segmentoAPix($pagamento)
     {
         $this->iniciaDetalhe();
 
@@ -410,14 +411,14 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
         $this->add(18, 20, self::CODIGO_CAMARA_CENTRALIZADORA); // Código da câmara centralizadora
 
         // Dados bancários do favorecido (preenchidos apenas se forma de iniciação = "05")
-        $formaIniciacao = $dados['forma_iniciacao'] ?? self::FORMA_INICIACAO_PIX_DADOS_BANCARIOS;
+        $formaIniciacao = $pagamento->getFormaIniciacao() ?? self::FORMA_INICIACAO_PIX_DADOS_BANCARIOS;
         if ($formaIniciacao == self::FORMA_INICIACAO_PIX_DADOS_BANCARIOS) {
-            $this->add(21, 23, str_pad($dados['banco_favorecido'] ?? '0', 3, '0', STR_PAD_LEFT)); // [Favorecido] Código do banco
-            $this->add(24, 28, str_pad($dados['agencia_favorecido'] ?? '0', 5, '0', STR_PAD_LEFT)); // [Favorecido] Agência mantenedora da conta
-            $this->add(29, 29, $dados['agencia_dv_favorecido'] ?? '0'); // [Favorecido] Dígito verificador da agência
-            $this->add(30, 41, str_pad($dados['conta_favorecido'] ?? '0', 12, '0', STR_PAD_LEFT)); // [Favorecido] Número da conta corrente
-            $this->add(42, 42, $dados['conta_dv_favorecido'] ?? '0'); // [Favorecido] Dígito verificador da conta
-            $this->add(44, 73, Util::formatCnab('X', $dados['nome_favorecido'] ?? '', 30)); // [Favorecido] Nome
+            $this->add(21, 23, str_pad($pagamento->getBanco() ?? '0', 3, '0', STR_PAD_LEFT)); // [Favorecido] Código do banco
+            $this->add(24, 28, str_pad($pagamento->getAgencia() ?? '0', 5, '0', STR_PAD_LEFT)); // [Favorecido] Agência mantenedora da conta
+            $this->add(29, 29, $pagamento->getAgenciaDv() ?? '0'); // [Favorecido] Dígito verificador da agência
+            $this->add(30, 41, str_pad($pagamento->getConta() ?? '0', 12, '0', STR_PAD_LEFT)); // [Favorecido] Número da conta corrente
+            $this->add(42, 42, $pagamento->getContaDv() ?? '0'); // [Favorecido] Dígito verificador da conta
+            $this->add(44, 73, Util::formatCnab('X', $pagamento->getBeneficiario()->getNome() ?? '', 30)); // [Favorecido] Nome
         } else {
             $this->add(21, 23, '000'); // [Favorecido] Código do banco
             $this->add(24, 28, '00000'); // [Favorecido] Agência mantenedora da conta
@@ -428,19 +429,19 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
         }
 
         $this->add(43, 43, self::CAMPO_BRANCO); // Campo em branco
-        $this->add(74, 93, Util::formatCnab('X', $dados['numero_documento'] ?? '', 20)); // Número do documento atribuído para empresa
-        $dataPagamento = isset($dados['data_pagamento']) ? date('dmY', strtotime($dados['data_pagamento'])) : date('dmY');
+        $this->add(74, 93, Util::formatCnab('X', $pagamento->getNumeroDocumento() ?? '', 20)); // Número do documento atribuído para empresa
+        $dataPagamento = $pagamento->getDataVencimento() ? date('dmY', strtotime($pagamento->getDataVencimento())) : date('dmY');
         $this->add(94, 101, $dataPagamento); // Data do pagamento
         $this->add(102, 104, self::TIPO_MOEDA); // Tipo da moeda
         $this->add(105, 119, self::QUANTIDADE_MOEDA); // Quantidade da moeda
-        $valor = isset($dados['valor']) ? number_format($dados['valor'], 2, '', '') : '000000000000000';
+        $valor = $pagamento->getValor() ? number_format($pagamento->getValor(), 2, '', '') : '000000000000000';
         $this->add(120, 134, str_pad($valor, 15, '0', STR_PAD_LEFT)); // Valor do pagamento
         $this->add(135, 154, self::CAMPO_BRANCO); // Número do documento atribuído pelo banco
         $this->add(155, 162, self::DATA_RETORNO_VAZIA); // Data real da efetivação do pagamento (Retorno)
         $this->add(163, 177, self::VALOR_RETORNO_VAZIO); // Valor real da efetivação do pagamento (Retorno)
-        $this->add(178, 191, str_pad($dados['cpf_cnpj_favorecido'] ?? '0', 14, '0', STR_PAD_LEFT)); // [Identificação do Pagamento] Número do CPF/CNPJ
-        $this->add(192, 199, str_pad($dados['ispb_favorecido'] ?? '0', 8, '0', STR_PAD_LEFT)); // [Identificação do Pagamento] Código do ISPB
-        $this->add(200, 201, $dados['tipo_conta'] ?? self::TIPO_CONTA_CORRENTE); // [Identificação do Pagamento] Tipo de conta
+        $this->add(178, 191, str_pad($pagamento->getBeneficiario()->getDocumento() ?? '0', 14, '0', STR_PAD_LEFT)); // [Identificação do Pagamento] Número do CPF/CNPJ
+        $this->add(192, 199, str_pad($pagamento->getBanco() ?? '0', 8, '0', STR_PAD_LEFT)); // [Identificação do Pagamento] Código do ISPB
+        $this->add(200, 201, $pagamento->getTipoConta() ?? self::TIPO_CONTA_CORRENTE); // [Identificação do Pagamento] Tipo de conta
         $this->add(202, 230, self::CAMPO_BRANCO); // Campo em branco (conforme Item 27 da imagem)
         $this->add(231, 240, self::CAMPO_BRANCO); // Códigos das ocorrências para retorno
 
@@ -451,10 +452,10 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
     /**
      * Adiciona um segmento B para PIX
      *
-     * @param array $dados
+     * @param BancoInter $pagamento
      * @return $this
      */
-    public function segmentoBPix($dados)
+    public function segmentoBPix($pagamento)
     {
         $this->iniciaDetalhe();
 
@@ -463,30 +464,30 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
         $this->add(8, 8, self::TIPO_REGISTRO_DETALHE); // Tipo de registro
         $this->add(9, 13, str_pad($this->iRegistrosLote, 5, '0', STR_PAD_LEFT)); // Número sequencial do registro detalhe
         $this->add(14, 14, self::CODIGO_SEGMENTO_B); // Código de segmento do registro detalhe
-        $this->add(15, 17, $dados['forma_iniciacao'] ?? self::FORMA_INICIACAO_PIX_CPF_CNPJ); // Forma de iniciação (tipo de chave)
-        $this->add(18, 18, $dados['tipo_documento_favorecido'] ?? self::TIPO_DOCUMENTO_CPF); // [Favorecido] Tipo de documento
+        $this->add(15, 17, $pagamento->getFormaIniciacao() ?? self::FORMA_INICIACAO_PIX_CPF_CNPJ); // Forma de iniciação (tipo de chave)
+        $this->add(18, 18, $pagamento->getBeneficiario()->getTipoDocumento() ?? self::TIPO_DOCUMENTO_CPF); // [Favorecido] Tipo de documento
 
         // CPF/CNPJ (preenchido apenas se forma de iniciação = "03")
-        $formaIniciacao = $dados['forma_iniciacao'] ?? self::FORMA_INICIACAO_PIX_CPF_CNPJ;
+        $formaIniciacao = $pagamento->getFormaIniciacao() ?? self::FORMA_INICIACAO_PIX_CPF_CNPJ;
         if ($formaIniciacao == self::FORMA_INICIACAO_PIX_CPF_CNPJ) {
-            $documento = str_pad($dados['documento_favorecido'] ?? '0', 14, '0', STR_PAD_LEFT);
+            $documento = str_pad($pagamento->getBeneficiario()->getDocumento() ?? '0', 14, '0', STR_PAD_LEFT);
             $this->add(19, 32, $documento); // [Favorecido] CPF/CNPJ
         } else {
             $this->add(19, 32, self::CAMPO_BRANCO); // [Favorecido] CPF/CNPJ
         }
 
-        $this->add(33, 67, Util::formatCnab('X', $dados['tx_id'] ?? '', 35)); // TX ID (Opcional)
+        $this->add(33, 67, Util::formatCnab('X', $pagamento->getTxId() ?? '', 35)); // TX ID (Opcional)
         $this->add(68, 127, self::CAMPO_BRANCO); // Campo em branco
 
         // Chave PIX (preenchida apenas se forma de iniciação = "01", "02" ou "04")
         if (in_array($formaIniciacao, [self::FORMA_INICIACAO_PIX_TELEFONE, self::FORMA_INICIACAO_PIX_EMAIL, self::FORMA_INICIACAO_PIX_ALEATORIA])) {
-            $this->add(128, 226, Util::formatCnab('X', $dados['chave_pix'] ?? '', 99)); // Chave Pix (telefone, e-mail ou aleatória)
+            $this->add(128, 226, Util::formatCnab('X', $pagamento->getPixChave() ?? '', 99)); // Chave Pix (telefone, e-mail ou aleatória)
         } else {
             $this->add(128, 226, self::CAMPO_BRANCO); // Chave Pix
         }
 
         $this->add(227, 232, self::CAMPO_BRANCO); // Campo em branco
-        $this->add(233, 240, str_pad($dados['ispb_favorecido'] ?? '0', 8, '0', STR_PAD_LEFT)); // [Favorecido] Código ISPB
+        $this->add(233, 240, str_pad($pagamento->getBanco() ?? '0', 8, '0', STR_PAD_LEFT)); // [Favorecido] Código ISPB
 
         $this->iRegistrosLote++;
         return $this;
@@ -495,10 +496,10 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
     /**
      * Adiciona um segmento B para TED
      *
-     * @param array $dados
+     * @param BancoInter $pagamento
      * @return $this
      */
-    public function segmentoB($dados)
+    public function segmentoB($pagamento)
     {
         $this->iniciaDetalhe();
 
@@ -508,18 +509,18 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
         $this->add(9, 13, str_pad($this->iRegistrosLote, 5, '0', STR_PAD_LEFT)); // Número sequencial do registro detalhe
         $this->add(14, 14, self::CODIGO_SEGMENTO_B); // Código de segmento do registro detalhe
         $this->add(15, 17, self::CAMPO_BRANCO); // Campo em branco
-        $this->add(18, 18, $dados['tipo_documento_favorecido'] ?? self::TIPO_DOCUMENTO_CNPJ); // [Favorecido] Tipo de documento
-        $this->add(19, 32, str_pad($dados['documento_favorecido'] ?? '0', 14, '0', STR_PAD_LEFT)); // [Favorecido] CPF/CNPJ
-        $this->add(33, 67, Util::formatCnab('X', $dados['logradouro_favorecido'] ?? '', 35)); // [Favorecido] Logradouro
-        $this->add(68, 72, Util::formatCnab('X', $dados['numero_local_favorecido'] ?? '', 5)); // [Favorecido] Número do local
-        $this->add(73, 87, Util::formatCnab('X', $dados['complemento_favorecido'] ?? '', 15)); // [Favorecido] Complemento
-        $this->add(88, 102, Util::formatCnab('X', $dados['bairro_favorecido'] ?? '', 15)); // [Favorecido] Bairro
-        $this->add(103, 117, Util::formatCnab('X', $dados['cidade_favorecido'] ?? '', 15)); // [Favorecido] Nome da cidade
-        $cep = isset($dados['cep_favorecido']) ? str_replace(['-', ' '], '', $dados['cep_favorecido']) : '00000000';
+        $this->add(18, 18, $pagamento->getBeneficiario()->getTipoDocumento() ?? self::TIPO_DOCUMENTO_CNPJ); // [Favorecido] Tipo de documento
+        $this->add(19, 32, str_pad($pagamento->getBeneficiario()->getDocumento() ?? '0', 14, '0', STR_PAD_LEFT)); // [Favorecido] CPF/CNPJ
+        $this->add(33, 67, Util::formatCnab('X', $pagamento->getBeneficiario()->getEndereco() ?? '', 35)); // [Favorecido] Logradouro
+        $this->add(68, 72, Util::formatCnab('X', '', 5)); // [Favorecido] Número do local
+        $this->add(73, 87, Util::formatCnab('X', '', 15)); // [Favorecido] Complemento
+        $this->add(88, 102, Util::formatCnab('X', $pagamento->getBeneficiario()->getBairro() ?? '', 15)); // [Favorecido] Bairro
+        $this->add(103, 117, Util::formatCnab('X', $pagamento->getBeneficiario()->getCidade() ?? '', 15)); // [Favorecido] Nome da cidade
+        $cep = $pagamento->getBeneficiario()->getCep() ? str_replace(['-', ' '], '', $pagamento->getBeneficiario()->getCep()) : '00000000';
         $this->add(118, 125, str_pad($cep, 8, '0', STR_PAD_LEFT)); // [Favorecido] CEP
-        $this->add(126, 127, Util::formatCnab('X', $dados['uf_favorecido'] ?? '', 2)); // [Favorecido] Sigla do estado
+        $this->add(126, 127, Util::formatCnab('X', $pagamento->getBeneficiario()->getUf() ?? '', 2)); // [Favorecido] Sigla do estado
         $this->add(128, 232, self::CAMPO_BRANCO); // Campo em branco
-        $this->add(233, 240, str_pad($dados['ispb_favorecido'] ?? '0', 8, '0', STR_PAD_LEFT)); // [Favorecido] Código ISPB
+        $this->add(233, 240, str_pad($pagamento->getBanco() ?? '0', 8, '0', STR_PAD_LEFT)); // [Favorecido] Código ISPB
 
         $this->iRegistrosLote++;
         return $this;
