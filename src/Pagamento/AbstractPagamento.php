@@ -268,6 +268,13 @@ abstract class AbstractPagamento implements PagamentoContract
     protected $contaDv;
 
     /**
+     * Tipo de conta
+     *
+     * @var string
+     */
+    protected $tipoConta;
+
+    /**
      * Modalidade de cobrança do cliente, geralmente Cobrança Simples ou Registrada
      *
      * @var string
@@ -643,6 +650,30 @@ abstract class AbstractPagamento implements PagamentoContract
     public function getBeneficiario()
     {
         return $this->beneficiario;
+    }
+
+    /**
+     * Define o tipo de conta
+     *
+     * @param string $tipoConta
+     *
+     * @return AbstractPagamento
+     */
+    public function setTipoConta($tipoConta)
+    {
+        $this->tipoConta = $tipoConta;
+
+        return $this;
+    }
+
+    /**
+     * Retorna o tipo de conta
+     *
+     * @return string
+     */
+    public function getTipoConta()
+    {
+        return $this->tipoConta;
     }
 
     /**
