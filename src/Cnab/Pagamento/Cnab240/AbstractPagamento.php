@@ -4,9 +4,9 @@ namespace Eduardokum\LaravelBoleto\Cnab\Pagamento\Cnab240;
 
 use ForceUTF8\Encoding;
 use Eduardokum\LaravelBoleto\Exception\ValidationException;
-use Eduardokum\LaravelBoleto\Cnab\Remessa\AbstractRemessa as AbstractRemessaGeneric;
+use Eduardokum\LaravelBoleto\Cnab\Pagamento\AbstractPagamento as AbstractPagamentoGeneric;
 
-abstract class AbstractRemessa extends AbstractRemessaGeneric
+abstract class AbstractPagamento extends AbstractPagamentoGeneric
 {
     protected $tamanho_linha = 240;
 
