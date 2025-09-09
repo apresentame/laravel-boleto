@@ -2,16 +2,16 @@
 
 namespace Eduardokum\LaravelBoleto\Cnab\Pagamento\Cnab240\Banco;
 
-use Eduardokum\LaravelBoleto\Cnab\Pagamento\Cnab240\AbstractRemessa;
-use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto as BoletoContract;
-use Eduardokum\LaravelBoleto\Contracts\Cnab\Remessa as RemessaContract;
+use Eduardokum\LaravelBoleto\Cnab\Pagamento\Cnab240\AbstractPagamento;
+use Eduardokum\LaravelBoleto\Contracts\Cnab\Pagamento as PagamentoRemessaContract;
+use Eduardokum\LaravelBoleto\Contracts\Pagamento\Pagamento as PagamentoContract;
 use Eduardokum\LaravelBoleto\Util;
 
 /**
  * Class Inter
  * @package Eduardokum\LaravelBoleto\Cnab\Pagamento\Cnab240\Banco
  */
-class Inter extends AbstractRemessa implements RemessaContract
+class Inter extends AbstractPagamento implements PagamentoRemessaContract
 {
     const BANCO = '077';
     const LOTE_SERVICO = '0000';
@@ -20,7 +20,7 @@ class Inter extends AbstractRemessa implements RemessaContract
     const CODIGO_REMESSA = '1';
     const VERSAO_LAYOUT = '107';
     const DENSIDADE_GRAVACAO = '01600';
-    
+
     // Constantes para segmentos
     const TIPO_REGISTRO_DETALHE = '3';
     const CODIGO_SEGMENTO_A = 'A';
@@ -34,7 +34,7 @@ class Inter extends AbstractRemessa implements RemessaContract
     const FINALIDADE_TED_SALARIOS = '00004';
     const FINALIDADE_TED_FORNECEDORES = '00005';
     const FINALIDADE_TED_CREDITO_CONTA = '00010';
-    
+
     // Constantes específicas para PIX
     const FORMA_INICIACAO_PIX_TELEFONE = '01'; // Chave PIX - Telefone
     const FORMA_INICIACAO_PIX_EMAIL = '02'; // Chave PIX - Email
@@ -43,12 +43,12 @@ class Inter extends AbstractRemessa implements RemessaContract
     const FORMA_INICIACAO_PIX_DADOS_BANCARIOS = '05'; // Dados bancários
     const TIPO_DOCUMENTO_CPF = '1';
     const TIPO_DOCUMENTO_CNPJ = '2';
-    
+
     // Constantes para campos de retorno (preenchidos pelo banco)
     const CAMPO_BRANCO = '';
     const DATA_RETORNO_VAZIA = '00000000';
     const VALOR_RETORNO_VAZIO = '000000000000000';
-    
+
     // Constantes para header e trailer
     const NOME_BANCO = 'BANCO INTER';
     const AGENCIA_EMPRESA = '00001';
@@ -68,12 +68,12 @@ class Inter extends AbstractRemessa implements RemessaContract
     {
         parent::__construct($params);
         $this->codigoBanco = self::BANCO;
-        
+
         // Configurar tipo de pagamento se fornecido
         if (isset($params['tipoPagamento'])) {
             $this->tipoPagamento = $params['tipoPagamento'];
         }
-        
+
         // Configurar tipo de serviço se fornecido
         if (isset($params['tipoServico'])) {
             $this->tipoServico = $params['tipoServico'];
@@ -192,13 +192,16 @@ class Inter extends AbstractRemessa implements RemessaContract
     }
 
     /**
-     * @param BoletoContract $boleto
+     * @param PagamentoContract $pagamento
      * @return Inter
      * @throws \Exception
      */
-    public function addBoleto(BoletoContract $boleto)
+    public function addPagamento(PagamentoContract $pagamento)
     {
-        // Implementar adição de boleto para pagamento
+        $this->pagamentos[] = $pagamento;
+        $this->segmentoAPix($pagamento);
+        $this->segmentoBPix($pagamento);
+
         return $this;
     }
 
@@ -320,8 +323,8 @@ class Inter extends AbstractRemessa implements RemessaContract
     protected function getFormaLancamento()
     {
         $tipoPagamento = $this->getTipoPagamento();
-        
-        switch($tipoPagamento) {
+
+        switch ($tipoPagamento) {
             case 'TED':
                 return '03'; // TED
             case 'PIX':
@@ -352,7 +355,7 @@ class Inter extends AbstractRemessa implements RemessaContract
     public function segmentoA($dados)
     {
         $this->iniciaDetalhe();
-        
+
         $this->add(1, 3, self::BANCO); // Código do banco na compensação
         $this->add(4, 7, self::LOTE_SERVICO); // Lote de serviço
         $this->add(8, 8, self::TIPO_REGISTRO_DETALHE); // Tipo de registro
@@ -382,7 +385,7 @@ class Inter extends AbstractRemessa implements RemessaContract
         $this->add(200, 201, $dados['tipo_conta'] ?? self::TIPO_CONTA_CORRENTE); // [Identificação do Pagamento] Tipo de conta
         $this->add(202, 230, self::CAMPO_BRANCO); // Campo em branco (conforme Item 27 da imagem)
         $this->add(231, 240, self::CAMPO_BRANCO); // Códigos das ocorrências para retorno
-        
+
         $this->iRegistrosLote++;
         return $this;
     }
@@ -396,7 +399,7 @@ class Inter extends AbstractRemessa implements RemessaContract
     public function segmentoAPix($dados)
     {
         $this->iniciaDetalhe();
-        
+
         $this->add(1, 3, self::BANCO); // Código do banco na compensação
         $this->add(4, 7, self::LOTE_SERVICO); // Lote de serviço
         $this->add(8, 8, self::TIPO_REGISTRO_DETALHE); // Tipo de registro
@@ -405,7 +408,7 @@ class Inter extends AbstractRemessa implements RemessaContract
         $this->add(15, 15, self::TIPO_MOVIMENTO); // Tipo de movimento
         $this->add(16, 17, self::CODIGO_INSTRUCAO_MOVIMENTO); // Código da instrução para movimento
         $this->add(18, 20, self::CODIGO_CAMARA_CENTRALIZADORA); // Código da câmara centralizadora
-        
+
         // Dados bancários do favorecido (preenchidos apenas se forma de iniciação = "05")
         $formaIniciacao = $dados['forma_iniciacao'] ?? self::FORMA_INICIACAO_PIX_DADOS_BANCARIOS;
         if ($formaIniciacao == self::FORMA_INICIACAO_PIX_DADOS_BANCARIOS) {
@@ -423,7 +426,7 @@ class Inter extends AbstractRemessa implements RemessaContract
             $this->add(42, 42, '0'); // [Favorecido] Dígito verificador da conta
             $this->add(44, 73, '000000000000000000000000000000'); // [Favorecido] Nome
         }
-        
+
         $this->add(43, 43, self::CAMPO_BRANCO); // Campo em branco
         $this->add(74, 93, Util::formatCnab('X', $dados['numero_documento'] ?? '', 20)); // Número do documento atribuído para empresa
         $dataPagamento = isset($dados['data_pagamento']) ? date('dmY', strtotime($dados['data_pagamento'])) : date('dmY');
@@ -440,7 +443,7 @@ class Inter extends AbstractRemessa implements RemessaContract
         $this->add(200, 201, $dados['tipo_conta'] ?? self::TIPO_CONTA_CORRENTE); // [Identificação do Pagamento] Tipo de conta
         $this->add(202, 230, self::CAMPO_BRANCO); // Campo em branco (conforme Item 27 da imagem)
         $this->add(231, 240, self::CAMPO_BRANCO); // Códigos das ocorrências para retorno
-        
+
         $this->iRegistrosLote++;
         return $this;
     }
@@ -454,7 +457,7 @@ class Inter extends AbstractRemessa implements RemessaContract
     public function segmentoBPix($dados)
     {
         $this->iniciaDetalhe();
-        
+
         $this->add(1, 3, self::BANCO); // Código do banco na compensação
         $this->add(4, 7, self::LOTE_SERVICO); // Lote de serviço
         $this->add(8, 8, self::TIPO_REGISTRO_DETALHE); // Tipo de registro
@@ -462,7 +465,7 @@ class Inter extends AbstractRemessa implements RemessaContract
         $this->add(14, 14, self::CODIGO_SEGMENTO_B); // Código de segmento do registro detalhe
         $this->add(15, 17, $dados['forma_iniciacao'] ?? self::FORMA_INICIACAO_PIX_CPF_CNPJ); // Forma de iniciação (tipo de chave)
         $this->add(18, 18, $dados['tipo_documento_favorecido'] ?? self::TIPO_DOCUMENTO_CPF); // [Favorecido] Tipo de documento
-        
+
         // CPF/CNPJ (preenchido apenas se forma de iniciação = "03")
         $formaIniciacao = $dados['forma_iniciacao'] ?? self::FORMA_INICIACAO_PIX_CPF_CNPJ;
         if ($formaIniciacao == self::FORMA_INICIACAO_PIX_CPF_CNPJ) {
@@ -471,20 +474,20 @@ class Inter extends AbstractRemessa implements RemessaContract
         } else {
             $this->add(19, 32, self::CAMPO_BRANCO); // [Favorecido] CPF/CNPJ
         }
-        
+
         $this->add(33, 67, Util::formatCnab('X', $dados['tx_id'] ?? '', 35)); // TX ID (Opcional)
         $this->add(68, 127, self::CAMPO_BRANCO); // Campo em branco
-        
+
         // Chave PIX (preenchida apenas se forma de iniciação = "01", "02" ou "04")
         if (in_array($formaIniciacao, [self::FORMA_INICIACAO_PIX_TELEFONE, self::FORMA_INICIACAO_PIX_EMAIL, self::FORMA_INICIACAO_PIX_ALEATORIA])) {
             $this->add(128, 226, Util::formatCnab('X', $dados['chave_pix'] ?? '', 99)); // Chave Pix (telefone, e-mail ou aleatória)
         } else {
             $this->add(128, 226, self::CAMPO_BRANCO); // Chave Pix
         }
-        
+
         $this->add(227, 232, self::CAMPO_BRANCO); // Campo em branco
         $this->add(233, 240, str_pad($dados['ispb_favorecido'] ?? '0', 8, '0', STR_PAD_LEFT)); // [Favorecido] Código ISPB
-        
+
         $this->iRegistrosLote++;
         return $this;
     }
@@ -498,7 +501,7 @@ class Inter extends AbstractRemessa implements RemessaContract
     public function segmentoB($dados)
     {
         $this->iniciaDetalhe();
-        
+
         $this->add(1, 3, self::BANCO); // Código do banco na compensação
         $this->add(4, 7, self::LOTE_SERVICO); // Lote de serviço
         $this->add(8, 8, self::TIPO_REGISTRO_DETALHE); // Tipo de registro
@@ -517,7 +520,7 @@ class Inter extends AbstractRemessa implements RemessaContract
         $this->add(126, 127, Util::formatCnab('X', $dados['uf_favorecido'] ?? '', 2)); // [Favorecido] Sigla do estado
         $this->add(128, 232, self::CAMPO_BRANCO); // Campo em branco
         $this->add(233, 240, str_pad($dados['ispb_favorecido'] ?? '0', 8, '0', STR_PAD_LEFT)); // [Favorecido] Código ISPB
-        
+
         $this->iRegistrosLote++;
         return $this;
     }
