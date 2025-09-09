@@ -439,7 +439,7 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
         $this->add(135, 154, self::CAMPO_BRANCO); // Número do documento atribuído pelo banco
         $this->add(155, 162, self::DATA_RETORNO_VAZIA); // Data real da efetivação do pagamento (Retorno)
         $this->add(163, 177, self::VALOR_RETORNO_VAZIO); // Valor real da efetivação do pagamento (Retorno)
-        $this->add(178, 191, str_pad($pagamento->getBeneficiario()->getDocumento() ?? '0', 14, '0', STR_PAD_LEFT)); // [Identificação do Pagamento] Número do CPF/CNPJ
+        $this->add(178, 191, str_pad(Util::onlyNumbers($pagamento->getBeneficiario()->getDocumento()) ?? '0', 14, '0', STR_PAD_LEFT)); // [Identificação do Pagamento] Número do CPF/CNPJ
         $this->add(192, 199, str_pad($pagamento->getBanco() ?? '0', 8, '0', STR_PAD_LEFT)); // [Identificação do Pagamento] Código do ISPB
         $this->add(200, 201, $pagamento->getTipoConta() ?? self::TIPO_CONTA_CORRENTE); // [Identificação do Pagamento] Tipo de conta
         $this->add(202, 230, self::CAMPO_BRANCO); // Campo em branco (conforme Item 27 da imagem)
@@ -465,12 +465,12 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
         $this->add(9, 13, str_pad($this->iRegistrosLote, 5, '0', STR_PAD_LEFT)); // Número sequencial do registro detalhe
         $this->add(14, 14, self::CODIGO_SEGMENTO_B); // Código de segmento do registro detalhe
         $this->add(15, 17, $pagamento->getFormaIniciacao() ?? self::FORMA_INICIACAO_PIX_CPF_CNPJ); // Forma de iniciação (tipo de chave)
-        $this->add(18, 18, $pagamento->getBeneficiario()->getTipoDocumento() ?? self::TIPO_DOCUMENTO_CPF); // [Favorecido] Tipo de documento
+        $this->add(18, 18, $pagamento->getBeneficiario()->getTipoDocumento() == 'CPF' ? self::TIPO_DOCUMENTO_CPF : self::TIPO_DOCUMENTO_CNPJ); // [Favorecido] Tipo de documento
 
         // CPF/CNPJ (preenchido apenas se forma de iniciação = "03")
         $formaIniciacao = $pagamento->getFormaIniciacao() ?? self::FORMA_INICIACAO_PIX_CPF_CNPJ;
         if ($formaIniciacao == self::FORMA_INICIACAO_PIX_CPF_CNPJ) {
-            $documento = str_pad($pagamento->getBeneficiario()->getDocumento() ?? '0', 14, '0', STR_PAD_LEFT);
+            $documento = str_pad(Util::onlyNumbers($pagamento->getBeneficiario()->getDocumento()) ?? '0', 14, '0', STR_PAD_LEFT);
             $this->add(19, 32, $documento); // [Favorecido] CPF/CNPJ
         } else {
             $this->add(19, 32, self::CAMPO_BRANCO); // [Favorecido] CPF/CNPJ
@@ -509,8 +509,8 @@ class Inter extends AbstractPagamento implements PagamentoRemessaContract
         $this->add(9, 13, str_pad($this->iRegistrosLote, 5, '0', STR_PAD_LEFT)); // Número sequencial do registro detalhe
         $this->add(14, 14, self::CODIGO_SEGMENTO_B); // Código de segmento do registro detalhe
         $this->add(15, 17, self::CAMPO_BRANCO); // Campo em branco
-        $this->add(18, 18, $pagamento->getBeneficiario()->getTipoDocumento() ?? self::TIPO_DOCUMENTO_CNPJ); // [Favorecido] Tipo de documento
-        $this->add(19, 32, str_pad($pagamento->getBeneficiario()->getDocumento() ?? '0', 14, '0', STR_PAD_LEFT)); // [Favorecido] CPF/CNPJ
+        $this->add(18, 18, $pagamento->getBeneficiario()->getTipoDocumento() == 'CPF' ? self::TIPO_DOCUMENTO_CPF : self::TIPO_DOCUMENTO_CNPJ); // [Favorecido] Tipo de documento
+        $this->add(19, 32, str_pad(Util::onlyNumbers($pagamento->getBeneficiario()->getDocumento()) ?? '0', 14, '0', STR_PAD_LEFT)); // [Favorecido] CPF/CNPJ
         $this->add(33, 67, Util::formatCnab('X', $pagamento->getBeneficiario()->getEndereco() ?? '', 35)); // [Favorecido] Logradouro
         $this->add(68, 72, Util::formatCnab('X', '', 5)); // [Favorecido] Número do local
         $this->add(73, 87, Util::formatCnab('X', '', 15)); // [Favorecido] Complemento
