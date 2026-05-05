@@ -19,6 +19,11 @@ class Factory
             throw new ValidationException('Arquivo: não existe');
         }
 
+        // Detecta formato proprietário Banrisul CBR (160 chars/linha)
+        if (CbrBanrisul::isCbrFile($file)) {
+            return (new CbrBanrisul($file))->processar();
+        }
+
         if (! Util::isHeaderRetorno($file_content[0])) {
             throw new ValidationException("Arquivo: $file, não é um arquivo de retorno");
         }
