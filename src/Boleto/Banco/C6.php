@@ -17,7 +17,7 @@ class C6 extends AbstractBoleto implements BoletoContract
 
     /**
      * Local de pagamento
-     *
+     *111
      * @var string
      */
     protected $localPagamento = 'Pagável em canais eletrônicos, agências ou correspondentes';
