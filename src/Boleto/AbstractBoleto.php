@@ -606,7 +606,7 @@ abstract class AbstractBoleto implements BoletoContract
     public function setCarteira($carteira)
     {
         if ($this->getCarteiras() !== false && ! in_array($carteira, $this->getCarteiras())) {
-            throw new ValidationException('Carteira `' . $$carteira . '` não disponível! Carteiras válidas: ' . implode(', ', $this->getCarteiras()));
+            throw new ValidationException('Carteira `' . $carteira . '` não disponível! Carteiras válidas: ' . implode(', ', $this->getCarteiras()));
         }
         $this->carteira = $carteira;
 
@@ -1823,6 +1823,22 @@ abstract class AbstractBoleto implements BoletoContract
     public function getNossoNumeroMaxLength()
     {
         return null;
+    }
+
+    /**
+     * Informa se o número pode ser usado como nosso número no layout informado. Por padrão todo
+     * número que cabe no limite do banco serve; sobrescrevem os bancos cujo cálculo do dígito
+     * produz valores que algum layout não comporta. Serve para o consumidor pular esses números
+     * ao alocar a faixa, em vez de descobrir o problema só na recusa do arquivo.
+     *
+     * @param int        $numero
+     * @param string|int $layout Layout CNAB de destino ('240' ou '400')
+     *
+     * @return bool
+     */
+    public function nossoNumeroDisponivel($numero, $layout = null)
+    {
+        return true;
     }
 
     /**

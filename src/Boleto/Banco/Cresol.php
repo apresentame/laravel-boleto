@@ -6,6 +6,7 @@ use Eduardokum\LaravelBoleto\Util;
 use Eduardokum\LaravelBoleto\CalculoDV;
 use Eduardokum\LaravelBoleto\Boleto\AbstractBoleto;
 use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto;
+use Eduardokum\LaravelBoleto\Exception\ValidationException;
 use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto as BoletoContract;
 
 class Cresol extends AbstractBoleto implements BoletoContract
@@ -209,6 +210,31 @@ class Cresol extends AbstractBoleto implements BoletoContract
     public function getNossoNumeroDv()
     {
         return substr($this->getNossoNumero(), -1);
+    }
+
+    /**
+     * O CNAB 240 declara o dígito do nosso número como numérico (segmento P, pos. 57), mas o
+     * cálculo da Cresol devolve a letra "P" quando o resto do módulo 11 é 1 (~1 número em 11).
+     * Um único título assim faz a cooperativa descartar a remessa inteira, então esses números
+     * precisam ser pulados na alocação da faixa. No CNAB 400 o campo é alfanumérico e a letra passa.
+     *
+     * @param int        $numero
+     * @param string|int $layout
+     *
+     * @return bool
+     * @throws ValidationException
+     */
+    public function nossoNumeroDisponivel($numero, $layout = null)
+    {
+        if ((string) $layout !== '240') {
+            return true;
+        }
+
+        if (! $this->getCarteira()) {
+            throw new ValidationException('Informe a carteira para avaliar a disponibilidade do nosso número: o dígito verificador da Cresol é calculado sobre ela.');
+        }
+
+        return is_numeric(CalculoDV::cresolNossoNumero($this->getCarteira(), $numero));
     }
 
     /**
