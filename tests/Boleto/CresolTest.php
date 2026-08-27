@@ -7,6 +7,7 @@ use Eduardokum\LaravelBoleto\Pessoa;
 use Eduardokum\LaravelBoleto\CalculoDV;
 use Eduardokum\LaravelBoleto\Tests\TestCase;
 use Eduardokum\LaravelBoleto\Boleto\Banco\Cresol;
+use Eduardokum\LaravelBoleto\Exception\ValidationException;
 
 class CresolTest extends TestCase
 {
@@ -211,5 +212,70 @@ class CresolTest extends TestCase
 
         $this->assertEquals('077.651.119-06', $boleto->getBeneficiario()->getDocumento());
         $this->assertEquals(11, strlen(\Eduardokum\LaravelBoleto\Util::onlyNumbers($boleto->getBeneficiario()->getDocumento())));
+    }
+
+    /**
+     * O nosso número cujo dígito é a letra "P" não serve no CNAB 240, mas serve no 400.
+     * É a informação que o consumidor usa para pular esses números ao alocar a faixa
+     */
+    public function testNossoNumeroDisponivelPorLayout()
+    {
+        $boleto = $this->boleto([
+            'agencia'        => 1069,
+            'conta'          => 28245,
+            'numero'         => 2,
+            'dataVencimento' => new Carbon('2026-01-15'),
+            'valor'          => 10.00,
+        ]);
+
+        $this->assertEquals('P', $boleto->getNossoNumeroDv());
+        $this->assertFalse($boleto->nossoNumeroDisponivel(2, '240'));
+        $this->assertFalse($boleto->nossoNumeroDisponivel(2, 240));
+        $this->assertTrue($boleto->nossoNumeroDisponivel(2, '400'));
+        $this->assertTrue($boleto->nossoNumeroDisponivel(2));
+
+        $this->assertTrue($boleto->nossoNumeroDisponivel(1, '240'));
+        $this->assertTrue($boleto->nossoNumeroDisponivel(10, '240'));
+    }
+
+    /**
+     * A disponibilidade responde pelo número recebido, não pelo número do boleto, e
+     * precisa concordar com a validação que a remessa 240 faz do dígito
+     */
+    public function testNossoNumeroDisponivelConcordaComODigitoGerado()
+    {
+        for ($numero = 1; $numero <= 50; $numero++) {
+            $boleto = $this->boleto([
+                'agencia'        => 1069,
+                'conta'          => 28245,
+                'numero'         => $numero,
+                'dataVencimento' => new Carbon('2026-01-15'),
+                'valor'          => 10.00,
+            ]);
+
+            $this->assertEquals(
+                ! $boleto->nossoNumeroDvEhLetra(),
+                $boleto->nossoNumeroDisponivel($numero, '240'),
+                "nosso número $numero"
+            );
+        }
+    }
+
+    /**
+     * Sem carteira não há como calcular o dígito, então falha em vez de responder errado
+     */
+    public function testNossoNumeroDisponivelExigeCarteira()
+    {
+        $boleto = new Cresol([
+            'agencia'      => 1069,
+            'conta'        => 28245,
+            'beneficiario' => self::$beneficiario,
+            'pagador'      => self::$pagador,
+        ]);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Informe a carteira');
+
+        $boleto->nossoNumeroDisponivel(2, '240');
     }
 }
