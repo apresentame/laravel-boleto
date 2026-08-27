@@ -24,7 +24,7 @@ class FakeRetorno
     const DEFAULT_MIX = ['confirm', 'pay', 'reject', 'cancel'];
 
     /** Nomes amigáveis dos bancos (para mensagens). */
-    const BANKS = ['001' => 'Banco do Brasil', '341' => 'Itaú', '077' => 'Inter', '104' => 'Caixa', '033' => 'Santander', '748' => 'Sicredi', '756' => 'Bancoob', '041' => 'Banrisul', '085' => 'Ailos', '237' => 'Bradesco', '336' => 'C6 Bank'];
+    const BANKS = ['001' => 'Banco do Brasil', '341' => 'Itaú', '077' => 'Inter', '104' => 'Caixa', '033' => 'Santander', '748' => 'Sicredi', '756' => 'Bancoob', '041' => 'Banrisul', '085' => 'Ailos', '237' => 'Bradesco', '336' => 'C6 Bank', '133' => 'Cresol'];
 
     /**
      * @param string      $bankCode    Código do banco (ex.: '001')
@@ -62,6 +62,10 @@ class FakeRetorno
 
         if ($profile['layout'] === '400' && $profile['bank'] === '077') {
             return self::cnab400Inter($profile, $lines, $spec);
+        }
+
+        if ($profile['layout'] === '400' && $profile['bank'] === '133') {
+            return self::cnab400Cresol($profile, $lines, $spec);
         }
 
         // CNAB400 é específico por banco — implementar o transformador no profile correspondente.
@@ -129,6 +133,40 @@ class FakeRetorno
                     'settlement' => ['06'],
                     'rejection'  => ['03'],
                     'defaultRejectionReason' => 'Motivo fake de teste',
+                ],
+            ],
+            // Ocorrencias dos manuais "Padrao Retorno CNAB400 Cresol 133" (pos. 109-110) e
+            // "Manual Cobranca Integrada Cresol CNAB 240" secao 5.1.3 (segmento T, pos. 016-017).
+            // As duas tabelas sao iguais nos codigos usados aqui; os conjuntos de liquidacao e
+            // rejeicao espelham Cnab\Retorno\Cnab400\Banco\Cresol e o equivalente em Cnab240.
+            '133' => [
+                '240' => [
+                    'bank'   => '133',
+                    'layout' => '240',
+                    'occurrences' => [
+                        'confirm' => '02', // Entrada Confirmada
+                        'pay'     => '06', // Liquidacao
+                        'cancel'  => '09', // Baixa
+                        'reject'  => '03', // Entrada Rejeitada
+                        'change'  => '14', // Confirmacao recebimento instrucao alteracao de vencimento
+                    ],
+                    'settlement' => ['06', '17'],
+                    'rejection'  => ['03', '26', '30'],
+                    'defaultRejectionReason' => '63', // Entrada para Titulo ja Cadastrado
+                ],
+                '400' => [
+                    'bank'   => '133',
+                    'layout' => '400',
+                    'occurrences' => [
+                        'confirm' => '02',
+                        'pay'     => '06',
+                        'cancel'  => '09',
+                        'reject'  => '03',
+                        'change'  => '14',
+                    ],
+                    'settlement' => ['06', '17'],
+                    'rejection'  => ['03', '26', '30'],
+                    'defaultRejectionReason' => '63',
                 ],
             ],
         ];
@@ -424,6 +462,116 @@ class FakeRetorno
             [1, 1, '9'],
             [18, 25, self::num(count($titles), 8)],
             [121, 132, self::num($totalValor, 12)],
+            [395, 400, self::num($seq, 6)],
+        ]);
+
+        return implode("\r\n", $output) . "\r\n";
+    }
+
+    /**
+     * Transforma a remessa CNAB400 da Cresol em retorno, segundo o profile do banco.
+     *
+     * Remessa e retorno compartilham a identificacao do beneficiario (pos. 21-37), o numero de
+     * controle (38-62) e o nosso numero (71-82), mas divergem em todo o resto: numero do documento,
+     * vencimento e valor mudam de faixa. Por isso os campos sao lidos pela posicao de remessa e
+     * regravados na posicao de retorno, nunca copiados byte a byte. Referencia: manuais "Padrao
+     * Remessa CNAB400 Cresol 133" e "Padrao Retorno CNAB400 Cresol 133".
+     */
+    private static function cnab400Cresol(array $profile, array $lines, $spec)
+    {
+        $bank          = $profile['bank'];
+        $codigoEmpresa = '';
+        $titles        = [];
+
+        foreach ($lines as $line) {
+            $line = str_pad($line, 400, ' ');
+            $type = self::field($line, 1, 1);
+
+            if ($type === '0') {
+                $codigoEmpresa = self::field($line, 27, 46);
+            } elseif ($type === '1') {
+                $titles[] = [
+                    'agencia'       => self::field($line, 25, 29),
+                    'conta'         => self::field($line, 30, 36),
+                    'contaDv'       => self::field($line, 37, 37),
+                    'control'       => self::field($line, 38, 62),
+                    'nossoNumero'   => self::field($line, 71, 81),
+                    'nossoNumeroDv' => self::field($line, 82, 82),
+                    'documentNumber' => self::field($line, 111, 120),
+                    'dueDate'       => self::field($line, 121, 126),
+                    'value'         => self::field($line, 127, 139),
+                ];
+            }
+        }
+
+        if (empty($titles)) {
+            throw new ValidationException('Nenhum titulo (registro tipo 1) encontrado na remessa.');
+        }
+
+        $today  = date('dmy');
+        $output = [];
+
+        $output[] = self::set(str_repeat(' ', 400), [
+            [1, 1, '0'],
+            [2, 2, '2'],
+            [3, 9, 'RETORNO'],
+            [10, 11, '01'],
+            [12, 26, 'COBRANCA'],
+            [27, 46, self::num($codigoEmpresa, 20)],
+            [77, 79, $bank],
+            [80, 94, 'CRESOL'],
+            [95, 100, $today],
+            [101, 108, self::num(0, 8)],
+            [109, 113, self::num(0, 5)],
+            [380, 385, $today],
+            [395, 400, self::num(1, 6)],
+        ]);
+
+        $seq = 1;
+        foreach ($titles as $i => $t) {
+            [$occurrence, $reason] = self::resolveOccurrence($profile, $spec, $i, $t['control']);
+            $isSettlement = in_array($occurrence, $profile['settlement'], true);
+            $isRejection  = in_array($occurrence, $profile['rejection'], true);
+
+            $seq++;
+            $output[] = self::set(str_repeat(' ', 400), [
+                [1, 1, '1'],
+                [2, 3, self::num(0, 2)],
+                [4, 17, self::num(0, 14)],
+                // 21-37 = identificacao do beneficiario: zero + carteira (009) + cooperativa + conta + digito
+                [21, 21, '0'],
+                [22, 24, '009'],
+                [25, 29, self::num($t['agencia'], 5)],
+                [30, 36, self::num($t['conta'], 7)],
+                [37, 37, $t['contaDv']],
+                [38, 62, str_pad($t['control'], 25, ' ', STR_PAD_RIGHT)],
+                [71, 81, self::num($t['nossoNumero'], 11)],
+                [82, 82, $t['nossoNumeroDv']],
+                [109, 110, $occurrence],
+                [111, 116, $today],
+                [117, 126, str_pad($t['documentNumber'], 10, ' ', STR_PAD_RIGHT)],
+                [147, 152, $t['dueDate'] ?: $today],
+                [153, 165, self::num($t['value'], 13)],
+                [166, 168, $bank],
+                [169, 173, self::num($t['agencia'], 5)],
+                // 176-292 sao os campos de valor (tarifa, despesas, juros, IOF, abatimento, desconto,
+                // pago, mora, outros creditos) — sempre zero-filled, nunca em branco: o parser divide
+                // direto sobre eles (Cnab400\Banco\Cresol::processarDetalhe) e espaco quebra com TypeError.
+                [176, 253, self::num(0, 78)],
+                [254, 266, self::num($isSettlement ? $t['value'] : 0, 13)],
+                [267, 292, self::num(0, 26)],
+                [296, 301, $isSettlement ? $today : '000000'],
+                [319, 328, $isRejection ? str_pad(substr($reason, 0, 10), 10, '0', STR_PAD_RIGHT) : self::num(0, 10)],
+                [395, 400, self::num($seq, 6)],
+            ]);
+        }
+
+        $seq++;
+        $output[] = self::set(str_repeat(' ', 400), [
+            [1, 1, '9'],
+            [2, 2, '2'],
+            [3, 4, '01'],
+            [5, 7, $bank],
             [395, 400, self::num($seq, 6)],
         ]);
 
