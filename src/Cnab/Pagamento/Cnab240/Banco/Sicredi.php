@@ -134,7 +134,8 @@ class Sicredi extends AbstractPagamento implements PagamentoRemessaContract
 
         $convenio = $this->getConvenio() ?? '';
 
-        $this->add(33, 52, Util::formatCnab('X', $convenio, 20)); // 07.0 - Código do convênio no banco (G007)
+        $this->add(33, 36, Util::formatCnab('X', $convenio, 4)); // 07.0 - Código do convênio no banco (G007)
+        $this->add(37, 52, self::CAMPO_BRANCO); // 07.0 - Filler
         $this->add(53, 57, Util::formatCnab('9L', $this->getAgencia(), 5)); // 08.0 - Agência mantenedora da conta (G008)
         $this->add(58, 58, Util::formatCnab('X', $this->getAgenciaDv(), 1)); // 09.0 - Dígito verificador da agência (G009)
         $this->add(59, 70, Util::formatCnab('9L', $this->getConta(), 12)); // 10.0 - Número da conta corrente (G010)
@@ -394,7 +395,8 @@ class Sicredi extends AbstractPagamento implements PagamentoRemessaContract
 
         $convenio = $this->getConvenio() ?? '';
 
-        $this->add(33, 52, Util::formatCnab('X', $convenio, 20)); // 11.1 - Código do convênio no banco (G007)
+        $this->add(33, 36, Util::formatCnab('X', $convenio, 4)); // 11.1 - Código do convênio no banco (G007)
+        $this->add(37, 52, self::CAMPO_BRANCO); // 11.1 - Filler
         $this->add(53, 57, Util::formatCnab('9L', $this->getAgencia(), 5)); // 12.1 - Agência mantenedora da conta (G008)
         $this->add(58, 58, $this->getAgenciaDv()); // 13.1 - Dígito verificador da agência (G009)
         $this->add(59, 70, Util::formatCnab('9L', $this->getConta(), 12)); // 14.1 - Número da conta corrente (G010)
