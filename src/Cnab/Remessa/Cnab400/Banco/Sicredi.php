@@ -21,6 +21,8 @@ class Sicredi extends AbstractRemessa implements RemessaContract
     const ESPECIE_NOTA_DEBITOS = 'I';
     const ESPECIE_NOTA_SERVICOS = 'J';
     const ESPECIE_OUTROS = 'K';
+    const ESPECIE_BOLETO_PROPOSTA = 'O';
+    const TIPO_BOLETO_HIBRIDO = 'H';
     const OCORRENCIA_REMESSA = '01';
     const OCORRENCIA_BAIXA = '02';
     const OCORRENCIA_CONCESSAO_ABATIMENTO = '04';
@@ -156,11 +158,21 @@ class Sicredi extends AbstractRemessa implements RemessaContract
 
         $this->iniciaDetalhe(($chaveNfe = $boleto->getChaveNfe()) ? 44 : 0);
 
+        // Boleto hibrido (com QrCode PIX): marca "H" na posicao 006 (Tipo de Boleto) e, mais abaixo, gera o registro tipo 8. A chave PIX nao vai na remessa - o vinculo e do contrato do beneficiario com a cooperativa (itens 5.5 e 8.7 do manual).
+        $hibrido = $boleto->isPixHibrido();
+        $especieDocCodigo = $boleto->getEspecieDocCodigo('A', 400);
+        // Boleto Proposta (especie "O") nao admite QrCode - o titulo seria registrado como boleto comum e o QrCode sumiria sem aviso (itens 5.3 e 11 do manual); falha explicitamente em vez de degradar em silencio.
+        if ($hibrido && $especieDocCodigo == self::ESPECIE_BOLETO_PROPOSTA) {
+            throw new ValidationException('O Sicredi nao emite boleto hibrido (QrCode PIX) para a especie de documento "O - Boleto Proposta". Utilize outra especie de documento ou desligue o boleto hibrido (setPixHibrido(false)).');
+        }
+
         $this->add(1, 1, '1');
         $this->add(2, 2, 'A');
         $this->add(3, 3, $this->getCarteiraNumero());
         $this->add(4, 4, 'A');
-        $this->add(5, 16, '');
+        $this->add(5, 5, '');
+        $this->add(6, 6, $hibrido ? self::TIPO_BOLETO_HIBRIDO : '');
+        $this->add(7, 16, '');
         $this->add(17, 17, 'A');
         $this->add(18, 18, 'A');
         $this->add(19, 19, 'A');
@@ -196,7 +208,7 @@ class Sicredi extends AbstractRemessa implements RemessaContract
         $this->add(121, 126, $boleto->getDataVencimento()->format('dmy'));
         $this->add(127, 139, Util::formatCnab('9', $boleto->getValor(), 13, 2));
         $this->add(140, 148, '');
-        $this->add(149, 149, $boleto->getEspecieDocCodigo('A', 400));
+        $this->add(149, 149, $especieDocCodigo);
         $this->add(150, 150, $boleto->getAceite());
         $this->add(151, 156, $boleto->getDataDocumento()->format('dmy'));
         $this->add(157, 158, self::INSTRUCAO_SEM);
@@ -225,6 +237,24 @@ class Sicredi extends AbstractRemessa implements RemessaContract
         $this->add(395, 400, Util::formatCnab('9', $this->iRegistros + 1, 6));
         if ($chaveNfe) {
             $this->add(401, 444, Util::formatCnab('9', $chaveNfe, 44));
+        }
+
+        // Registro tipo 8 (item 8.7): obrigatorio quando o titulo e hibrido; vai logo apos o detalhe do titulo e conta no sequencial do arquivo.
+        if ($hibrido) {
+            $this->iniciaDetalhe();
+
+            $this->add(1, 1, '8');
+            // DIVERGENCIA manual x arquivo homologado: o manual descreve 002-016 como numerico (o que implicaria zeros a esquerda), mas o modelo homologado pelo Sicredi (COBModeloCNAB400hbrido.txt) traz "212000016000000", ou seja, nosso numero alinhado a ESQUERDA com zeros a direita. Seguimos o arquivo homologado.
+            $this->add(2, 16, str_pad(Util::formatCnab('9', $boleto->getNossoNumero(), 9), 15, '0', STR_PAD_RIGHT));
+            $this->add(17, 17, '');
+            $this->add(18, 18, self::TIPO_BOLETO_HIBRIDO);
+            $this->add(19, 30, '');
+            // DIVERGENCIA manual x arquivo homologado: o manual pede 031-040 "alinhado a direita e zeros a esquerda", mas o modelo homologado repete o campo exatamente como gravado em 111-120 do detalhe ("004303233 ", alinhado a esquerda). Seguimos o arquivo homologado, reaproveitando o mesmo valor do detalhe.
+            $this->add(31, 40, Util::formatCnab('X', $boleto->getNumeroControle(), 10));
+            // TXID (041-075) vai em branco de proposito: quem gera e vincula o TXID ao titulo e o Sicredi (itens 5.5 e 8.7).
+            $this->add(41, 75, '');
+            $this->add(76, 394, '');
+            $this->add(395, 400, Util::formatCnab('9', $this->iRegistros + 1, 6));
         }
 
         if ($boleto->getByte() == 1) {

@@ -105,6 +105,49 @@ class Sicredi extends AbstractBoleto implements BoletoContract
     protected $codigoCliente;
 
     /**
+     * Indica se o título deve ser registrado como boleto híbrido, ou seja, com QrCode PIX impresso junto do código de barras (item 5.5 do Manual CNAB 400 Cobrança Sicredi).
+     * Diferente de outros bancos, no Sicredi a chave PIX NÃO trafega na remessa: o vínculo PIX é do contrato do beneficiário com a cooperativa. O que liga o QrCode é (1) o "H" na posição 006 do registro detalhe (Tipo de Boleto) e (2) o registro tipo 8 de remessa com o TXID em branco, que o Sicredi gera e vincula ao título (itens 5.5 e 8.7).
+     * Mantido como false por padrão para que títulos já existentes continuem gerando exatamente a mesma remessa de hoje.
+     *
+     * @var bool
+     */
+    protected $pixHibrido = false;
+
+    /**
+     * Define se o título será registrado como boleto híbrido (com QrCode PIX)
+     *
+     * @param bool $pixHibrido
+     *
+     * @return Sicredi
+     */
+    public function setPixHibrido($pixHibrido)
+    {
+        $this->pixHibrido = (bool) $pixHibrido;
+
+        return $this;
+    }
+
+    /**
+     * Retorna se o título será registrado como boleto híbrido (com QrCode PIX)
+     *
+     * @return bool
+     */
+    public function getPixHibrido()
+    {
+        return $this->pixHibrido;
+    }
+
+    /**
+     * Alias de getPixHibrido(), seguindo o padrão isComRegistro() usado na lib
+     *
+     * @return bool
+     */
+    public function isPixHibrido()
+    {
+        return $this->pixHibrido;
+    }
+
+    /**
      * Define se possui ou não registro
      *
      * @param bool $registro

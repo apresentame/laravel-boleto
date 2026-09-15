@@ -10,3 +10,6 @@
 /generate-api.sh    export-ignore
 /manuais            export-ignore
 /docs               export-ignore
+
+# Arquivos-ouro de remessa CNAB sao comparados byte a byte nos testes: preservar o CRLF exigido pelo layout.
+tests/Remessa/files/sicredi/*.txt -text
