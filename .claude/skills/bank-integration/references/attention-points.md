@@ -11,6 +11,7 @@ An item is ticked only when it was **verified in the generated or parsed file** 
 - [ ] Manual recorded in a comment at the top of every implemented class
 - [ ] No position, code or table copied from another bank — everything came from this bank's manual
 - [ ] Any mismatch between the manual and the bank's real file taken to the developer, not resolved unilaterally
+- [ ] Where the bank supplies a homologated sample file, every field decoded from it and compared against the manual's table **before** writing code — the sample wins on mismatch, and each divergence is recorded as a comment at the exact position that implements it (Sicredi hybrid: the manual calls the type-8 "nosso número" numeric, implying leading zeros, while the homologated file has it left-aligned with trailing zeros; same record's "seu número" is documented as right-aligned but shipped left-aligned)
 
 ## B. Library registration
 
@@ -28,10 +29,13 @@ An item is ticked only when it was **verified in the generated or parsed file** 
 - [ ] File name follows the bank's required pattern (`nomeSugerido()`), where one exists
 - [ ] Encoding correct, and no accents or special characters where the manual forbids them
 - [ ] Every `add($i, $f, $value)` call has `$f - $i + 1` exactly equal to the width already baked into `$value` (e.g. `formatCnab(...)`'s own `$tamanho`) — `Util::adiciona()` re-pads any shorter value with a bare `sprintf("%{$t}s", ...)`, which right-justifies (pads on the left) regardless of the type's intended alignment, silently shifting a literal or fixed field by the size of the mismatch (C6: `add(12, 20, formatCnab('X', 'COBRANCA', 8))` put "COBRANCA" one position to the right of the manual's 12-19, bleeding the last char into what should have been blank position 20 — caught only because a positional assertion in the GATE 5 test checked the exact byte range, not because the code "looked right")
+- [ ] An optional record introduced behind a feature flag is proven inert when the flag is off — regenerate the file with the flag off and diff it **byte for byte** against a golden file captured from the code before the change, rather than trusting that the new branch is well isolated
+- [ ] An extra record added next to a variable-length detail keeps its own layout length — a detail extended by an optional trailing field (NF-e key, extra segment) must not drag the neighbouring record's width along with it
 
 ## D. Counters and sequences
 
 - [ ] Record sequence starts at 1 with no gaps — **counted on the generated lines**
+- [ ] A newly added optional record is counted in the file sequence and in the trailer total, and its position relative to the other optional records of the same title is confirmed against the manual or the sample (Sicredi hybrid: type 8 goes between the title detail and the type-2 message record)
 - [ ] Sequence within a batch restarts per batch (240)
 - [ ] Batch trailer matches the batch's real record count, including or excluding header and trailer exactly as the manual states
 - [ ] File trailer matches the batch count and the total record count
@@ -94,6 +98,9 @@ An item is ticked only when it was **verified in the generated or parsed file** 
 
 - [ ] The factory resolves the right class from the real file — tested
 - [ ] **Every** occurrence code in the manual mapped to a canonical type, with an explicit fallback at the end
+- [ ] Occurrence and reason-code coverage asserted by a **test that lists the manual's tables**, not by eyeballing the array — a return parser that predates the current manual silently degrades every new code to "unknown" (Sicredi: 9 occurrences and 33 reason codes missing, including all four that report the PIX/QR outcome)
+- [ ] When the bank ships a new manual version, existing codes **diffed** against the old one, not just appended to — a code can change meaning between versions and the old text then reports the wrong reason (Sicredi 2019→v3.1: codes 49 and 50 moved to 53 and 54, so the parser was naming the wrong rejection)
+- [ ] An unmapped reason code still reaches the consumer (raw code in the message), never an empty string — `array_filter` on lookup misses drops the reason entirely and a rejected title arrives flagged as an error with no explanation
 - [ ] No duplicated codes across the mapping lists
 - [ ] Rejections carry both the reason code **and** its description
 - [ ] Payment: all occurrence code pairs parsed, not just the first
