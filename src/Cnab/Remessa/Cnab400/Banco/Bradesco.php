@@ -249,4 +249,21 @@ class Bradesco extends AbstractRemessa implements RemessaContract
 
         return $this;
     }
+
+    /**
+     * Nome sugerido para o arquivo de remessa, conforme o padrão do manual
+     * "Cobrança Bradesco - Manual Operacional para Troca de Arquivos" (canal
+     * Bradesco Net Empresa/Webta): CBDDMM??.REM, onde DD/MM são a data de
+     * geração do arquivo e ?? um sufixo alfanumérico que diferencia arquivos
+     * gerados no mesmo dia (aqui derivado do número sequencial de remessa).
+     *
+     * @return string
+     */
+    public function nomeSugerido()
+    {
+        $sequencial = ((int) $this->getIdremessa()) % 1296;
+        $sufixo = strtoupper(str_pad(base_convert((string) $sequencial, 10, 36), 2, '0', STR_PAD_LEFT));
+
+        return sprintf('CB%s%s.REM', $this->getDataRemessa('dm'), $sufixo);
+    }
 }
