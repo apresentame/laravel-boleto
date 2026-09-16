@@ -53,14 +53,15 @@ class SicrediHibridoRetornoTest extends TestCase
 
     /**
      * @param string $alinhamento 'direita' = zeros à esquerda, 'esquerda' = zeros à direita
+     * @param string $nossoNumero
      *
      * @return string nosso número com os 15 caracteres do campo
      */
-    private function nossoNumeroCampo($alinhamento)
+    private function nossoNumeroCampo($alinhamento, $nossoNumero = self::NOSSO_NUMERO)
     {
         return $alinhamento === 'direita'
-            ? str_pad(self::NOSSO_NUMERO, 15, '0', STR_PAD_LEFT)
-            : str_pad(self::NOSSO_NUMERO, 15, '0', STR_PAD_RIGHT);
+            ? str_pad($nossoNumero, 15, '0', STR_PAD_LEFT)
+            : str_pad($nossoNumero, 15, '0', STR_PAD_RIGHT);
     }
 
     /**
@@ -78,7 +79,13 @@ class SicrediHibridoRetornoTest extends TestCase
             'comTipo8'          => true,
             'alinhamentoDetalhe' => 'direita',
             'alinhamentoTipo8'  => 'direita',
+            'nossoNumero'       => self::NOSSO_NUMERO,
+            'nossoNumeroTipo8'  => null,
         ], $opcoes);
+
+        if ($opcoes['nossoNumeroTipo8'] === null) {
+            $opcoes['nossoNumeroTipo8'] = $opcoes['nossoNumero'];
+        }
 
         $header = str_repeat(' ', 400);
         $this->gravaCampo($header, 1, '0');
@@ -100,7 +107,7 @@ class SicrediHibridoRetornoTest extends TestCase
         $this->gravaCampo($detalhe, 2, 'A');
         $this->gravaCampo($detalhe, 14, 'A');
         $this->gravaCampo($detalhe, 25, '2');
-        $this->gravaCampo($detalhe, 48, $this->nossoNumeroCampo($opcoes['alinhamentoDetalhe']));
+        $this->gravaCampo($detalhe, 48, $this->nossoNumeroCampo($opcoes['alinhamentoDetalhe'], $opcoes['nossoNumero']));
         $this->gravaCampo($detalhe, 109, $opcoes['ocorrencia']);
         $this->gravaCampo($detalhe, 111, '281021');
         $this->gravaCampo($detalhe, 117, '004303233 ');
@@ -121,7 +128,7 @@ class SicrediHibridoRetornoTest extends TestCase
             // Item 9.3: 002-016 nosso número · 018 "H" · 021-055 TXID · 057-133 URL do QrCode · 135-390 copia e cola
             $tipo8 = str_repeat(' ', 400);
             $this->gravaCampo($tipo8, 1, '8');
-            $this->gravaCampo($tipo8, 2, $this->nossoNumeroCampo($opcoes['alinhamentoTipo8']));
+            $this->gravaCampo($tipo8, 2, $this->nossoNumeroCampo($opcoes['alinhamentoTipo8'], $opcoes['nossoNumeroTipo8']));
             $this->gravaCampo($tipo8, 18, 'H');
             $this->gravaCampo($tipo8, 21, str_pad('cobranca_titulo_txid_123456', 35));
             $this->gravaCampo($tipo8, 57, str_pad(self::LOCATION, 77));
@@ -179,18 +186,150 @@ class SicrediHibridoRetornoTest extends TestCase
     }
 
     /**
-     * O casamento do nosso número entre o detalhe (048-062) e o tipo 8 (002-016) normaliza
-     * os dois lados, então funciona em qualquer alinhamento, desde que seja o MESMO nos dois campos.
+     * O Sicredi não é consistente no alinhamento do nosso número: o retorno traz o campo do detalhe
+     * (048-062) alinhado à direita, enquanto o registro tipo 8 da remessa homologada vem alinhado à
+     * esquerda com zeros à direita. Os itens 8.7 e 9.3 descrevem os dois campos de forma idêntica e não
+     * dizem qual vale, então o casamento tem de funcionar nas quatro combinações - com a combinação
+     * "detalhe à direita + tipo 8 à esquerda" sendo a que o arquivo real torna mais provável.
+     *
+     * @return array
      */
-    public function testCasamentoDoNossoNumeroIndependeDoAlinhamentoQuandoConsistente()
+    public static function alinhamentosDoNossoNumero()
     {
-        foreach (['direita', 'esquerda'] as $alinhamento) {
-            $detalhe = $this->detalhe([
-                'alinhamentoDetalhe' => $alinhamento,
-                'alinhamentoTipo8'   => $alinhamento,
-            ]);
+        $casos = [];
+        foreach (['direita', 'esquerda'] as $detalhe) {
+            foreach (['direita', 'esquerda'] as $tipo8) {
+                foreach ([
+                    'comum'              => self::NOSSO_NUMERO,
+                    'DV zero'            => '262005630',
+                    'zero à esquerda'    => '072000031',
+                ] as $rotulo => $nossoNumero) {
+                    $casos["detalhe $detalhe / tipo 8 $tipo8 / $rotulo"] = [$detalhe, $tipo8, $nossoNumero];
+                }
+            }
+        }
 
-            $this->assertEquals(self::EMV, trim($detalhe->getPixQrCode()), 'Alinhamento ' . $alinhamento);
+        return $casos;
+    }
+
+    /**
+     * @dataProvider alinhamentosDoNossoNumero
+     *
+     * @param string $alinhamentoDetalhe
+     * @param string $alinhamentoTipo8
+     * @param string $nossoNumero
+     */
+    public function testCasamentoDoNossoNumeroIndependeDoAlinhamento($alinhamentoDetalhe, $alinhamentoTipo8, $nossoNumero)
+    {
+        $detalhe = $this->detalhe([
+            'alinhamentoDetalhe' => $alinhamentoDetalhe,
+            'alinhamentoTipo8'   => $alinhamentoTipo8,
+            'nossoNumero'        => $nossoNumero,
+        ]);
+
+        $this->assertEquals(self::EMV, trim($detalhe->getPixQrCode()));
+        $this->assertEquals(self::LOCATION, trim($detalhe->getPixLocation()));
+    }
+
+    public function testTxidDoRegistroTipo8ChegaNoTitulo()
+    {
+        // TXID (021-055): identificador da cobrança PIX gerado pelo Sicredi, útil para conciliar um PIX recebido com o título
+        $this->assertEquals('cobranca_titulo_txid_123456', trim($this->detalhe()->getPixTxid()));
+    }
+
+    public function testRegistroTipo8OrfaoNaoGravaNadaENaoQuebraOArquivo()
+    {
+        $detalhe = $this->detalhe([
+            'alinhamentoTipo8'  => 'esquerda',
+            'nossoNumeroTipo8'  => '999999999',
+        ]);
+
+        $this->assertEmpty(trim((string) $detalhe->getPixQrCode()));
+        $this->assertEmpty(trim((string) $detalhe->getPixLocation()));
+        $this->assertEmpty(trim((string) $detalhe->getPixTxid()));
+        // O título em si continua processado normalmente
+        $this->assertEquals('02', $detalhe->getOcorrencia());
+    }
+
+    public function testCadaRegistroTipo8VaiParaOSeuTitulo()
+    {
+        // Dois títulos híbridos no mesmo arquivo, com os registros tipo 8 em ordem invertida e alinhamento
+        // diferente do detalhe: cada QrCode tem de chegar no título certo, sem troca.
+        $titulos = ['262005638', '262005646'];
+        $linhas = [];
+
+        $header = str_repeat(' ', 400);
+        $this->gravaCampo($header, 1, '0');
+        $this->gravaCampo($header, 2, '2');
+        $this->gravaCampo($header, 3, 'RETORNO');
+        $this->gravaCampo($header, 10, '01');
+        $this->gravaCampo($header, 12, 'COBRANCA       ');
+        $this->gravaCampo($header, 27, '90000');
+        $this->gravaCampo($header, 32, '39000386000177');
+        $this->gravaCampo($header, 77, '748');
+        $this->gravaCampo($header, 80, 'BANSICREDI     ');
+        $this->gravaCampo($header, 95, '20211028');
+        $this->gravaCampo($header, 111, '0000001');
+        $this->gravaCampo($header, 390, '99.99');
+        $linhas[] = $header;
+
+        foreach ($titulos as $nossoNumero) {
+            $detalhe = str_repeat(' ', 400);
+            $this->gravaCampo($detalhe, 1, '1');
+            $this->gravaCampo($detalhe, 2, 'A');
+            $this->gravaCampo($detalhe, 14, 'A');
+            $this->gravaCampo($detalhe, 25, '2');
+            $this->gravaCampo($detalhe, 48, $this->nossoNumeroCampo('direita', $nossoNumero));
+            $this->gravaCampo($detalhe, 109, '02');
+            $this->gravaCampo($detalhe, 111, '281021');
+            $this->gravaCampo($detalhe, 147, '181221');
+            $this->gravaCampo($detalhe, 153, '0000000000208');
+            foreach ([176, 189, 228, 241, 254, 267, 280] as $posicao) {
+                $this->gravaCampo($detalhe, $posicao, str_repeat('0', 13));
+            }
+            $this->gravaCampo($detalhe, 202, str_repeat('0', 26));
+            $this->gravaCampo($detalhe, 319, '0000000000');
+            $this->gravaCampo($detalhe, 329, '00000000');
+            $linhas[] = $detalhe;
+        }
+
+        foreach (array_reverse($titulos) as $nossoNumero) {
+            $tipo8 = str_repeat(' ', 400);
+            $this->gravaCampo($tipo8, 1, '8');
+            $this->gravaCampo($tipo8, 2, $this->nossoNumeroCampo('esquerda', $nossoNumero));
+            $this->gravaCampo($tipo8, 18, 'H');
+            $this->gravaCampo($tipo8, 21, str_pad('TXID-' . $nossoNumero, 35));
+            $this->gravaCampo($tipo8, 57, str_pad('pix-qrcode-h.sicredi.com.br/qr/v2/cobv/' . $nossoNumero, 77));
+            $this->gravaCampo($tipo8, 135, str_pad('EMV-' . $nossoNumero, 256));
+            $linhas[] = $tipo8;
+        }
+
+        $trailer = str_repeat(' ', 400);
+        $this->gravaCampo($trailer, 1, '9');
+        $this->gravaCampo($trailer, 2, '2');
+        $this->gravaCampo($trailer, 3, '748');
+        $this->gravaCampo($trailer, 6, '90000');
+        $linhas[] = $trailer;
+
+        foreach ($linhas as $i => $linha) {
+            $this->gravaCampo($linhas[$i], 395, str_pad((string) ($i + 1), 6, '0', STR_PAD_LEFT));
+        }
+
+        $arquivo = tempnam(sys_get_temp_dir(), 'sicredi_hibrido_multi_') . '.ret';
+        file_put_contents($arquivo, implode("\r\n", $linhas) . "\r\n");
+        $this->arquivos[] = $arquivo;
+
+        $retorno = new Sicredi($arquivo);
+        $retorno->processar();
+
+        $this->assertCount(2, $retorno->getDetalhes(), 'Os dois registros tipo 8 não podem virar títulos');
+
+        foreach ($retorno->getDetalhes() as $detalhe) {
+            $nossoNumero = ltrim((string) $detalhe->getNossoNumero(), '0');
+
+            $this->assertEquals('EMV-' . $nossoNumero, trim($detalhe->getPixQrCode()), 'QrCode do título ' . $nossoNumero);
+            $this->assertEquals('TXID-' . $nossoNumero, trim($detalhe->getPixTxid()), 'TXID do título ' . $nossoNumero);
+            $this->assertStringEndsWith($nossoNumero, trim($detalhe->getPixLocation()), 'Location do título ' . $nossoNumero);
         }
     }
 

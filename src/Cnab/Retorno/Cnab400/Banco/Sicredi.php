@@ -19,6 +19,11 @@ class Sicredi extends AbstractRetorno implements RetornoCnab400
     protected $codigoBanco = BoletoContract::COD_BANCO_SICREDI;
 
     /**
+     * Tamanho do nosso número do Sicredi (AABXXXXXD - item 4.4 do manual), que trafega dentro de campos de 15 posições
+     */
+    const TAMANHO_NOSSO_NUMERO = 9;
+
+    /**
      * Array com as ocorrencias do banco;
      *
      * @var array
@@ -415,9 +420,37 @@ class Sicredi extends AbstractRetorno implements RetornoCnab400
     }
 
     /**
+     * Devolve as duas leituras possíveis do nosso número dentro de um campo de 15 posições.
+     * O Sicredi não é consistente no alinhamento desse campo: o retorno traz o nosso número do detalhe (048-062)
+     * alinhado à direita com zeros à esquerda, enquanto o registro tipo 8 do arquivo de remessa homologado pelo
+     * próprio banco (COBModeloCNAB400hbrido.txt) traz "212000016000000", alinhado à esquerda com zeros à direita -
+     * e os itens 8.7 e 9.3 do manual descrevem os dois campos de forma idêntica, sem dizer qual vale.
+     * Comparar as duas leituras evita que o registro tipo 8 seja descartado em silêncio, deixando o título sem PIX.
+     * Não se usa ltrim() aqui porque ele deturpa nosso número começando com zero (ex.: "072000031", o exemplo do
+     * item 4.5 do manual): comeria o zero do ano num alinhamento e roubaria um zero do preenchimento no outro.
+     *
+     * @param string $campo
+     *
+     * @return array vazio quando o campo não traz nosso número
+     */
+    private function leiturasNossoNumero($campo)
+    {
+        $campo = trim((string) $campo);
+
+        if ($campo === '' || trim($campo, '0') === '') {
+            return [];
+        }
+
+        return array_values(array_unique([
+            substr($campo, 0, self::TAMANHO_NOSSO_NUMERO),
+            substr($campo, -self::TAMANHO_NOSSO_NUMERO),
+        ]));
+    }
+
+    /**
      * Processa o registro Híbrido (tipo 8) do arquivo de retorno, contendo os dados do PIX/QrCode.
      * O registro vem logo após o detalhe do seu título (item 9.3 do Manual CNAB 400 Sicredi):
-     *   002-016 Nosso número · 057-133 URL do QrCode (location) · 135-390 copia e cola (payload EMV)
+     *   002-016 Nosso número · 021-055 TXID · 057-133 URL do QrCode (location) · 135-390 copia e cola (payload EMV)
      * Enriquece o detalhe do título correspondente (casado pelo nosso número) e retorna false para
      * que a base descarte o detalhe vazio criado para esta linha.
      *
@@ -427,15 +460,16 @@ class Sicredi extends AbstractRetorno implements RetornoCnab400
      */
     private function processarDetalheHibrido(array $detalhe)
     {
-        $nossoNumero = ltrim($this->rem(2, 16, $detalhe), '0');
+        $nossoNumero = $this->leiturasNossoNumero($this->rem(2, 16, $detalhe));
+        $txid = $this->rem(21, 55, $detalhe);
         $location = $this->rem(57, 133, $detalhe);
         $emv = $this->rem(135, 390, $detalhe);
 
-        if ($nossoNumero !== '') {
+        if ($nossoNumero) {
             for ($i = $this->increment; $i >= 1; $i--) {
                 $titulo = $this->getDetalhe($i);
-                if ($titulo && ltrim((string) $titulo->getNossoNumero(), '0') === $nossoNumero) {
-                    $titulo->setPixLocation($location)->setPixQrCode($emv);
+                if ($titulo && array_intersect($nossoNumero, $this->leiturasNossoNumero($titulo->getNossoNumero()))) {
+                    $titulo->setPixLocation($location)->setPixQrCode($emv)->setPixTxid($txid);
                     break;
                 }
             }
