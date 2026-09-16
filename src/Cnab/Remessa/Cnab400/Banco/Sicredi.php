@@ -158,10 +158,27 @@ class Sicredi extends AbstractRemessa implements RemessaContract
 
         $this->iniciaDetalhe(($chaveNfe = $boleto->getChaveNfe()) ? 44 : 0);
 
+        // Ocorrencia (109-110) resolvida antes de montar a linha porque a posicao 006 depende dela.
+        $ocorrencia = self::OCORRENCIA_REMESSA; // REGISTRO
+        if ($boleto->getStatus() == $boleto::STATUS_BAIXA) {
+            $ocorrencia = self::OCORRENCIA_BAIXA; // BAIXA
+        }
+        if ($boleto->getStatus() == $boleto::STATUS_ALTERACAO) {
+            $ocorrencia = self::OCORRENCIA_ALT_OUTROS_DADOS; // ALTERAR OUTROS DADOS (Endereço, etc.)
+        }
+        if ($boleto->getStatus() == $boleto::STATUS_ALTERACAO_DATA) {
+            $ocorrencia = self::OCORRENCIA_ALT_VENCIMENTO; // ALTERAR VENCIMENTO
+        }
+        if ($boleto->getStatus() == $boleto::STATUS_CUSTOM) {
+            $ocorrencia = sprintf('%2.02s', $boleto->getComando());
+        }
+
         // Boleto hibrido (com QrCode PIX): marca "H" na posicao 006 (Tipo de Boleto) e, mais abaixo, gera o registro tipo 8. A chave PIX nao vai na remessa - o vinculo e do contrato do beneficiario com a cooperativa (itens 5.5 e 8.7 do manual).
-        $hibrido = $boleto->isPixHibrido();
+        // So vale no cadastro de titulo (ocorrencia 01): o tipo 8 e da emissao (item 8.7) e o manual nao tem instrucao que ligue ou desligue QrCode depois - a tabela 7.1 nao preve, o complemento da instrucao 31 (A-G) nao inclui PIX, e o Sicredi so reporta status de QrCode (motivos P1/P2) na ocorrencia 2, de entrada confirmada. Numa baixa ou alteracao o registro seria ruido que o banco nao tem como responder.
+        $hibrido = $boleto->isPixHibrido() && $ocorrencia === self::OCORRENCIA_REMESSA;
         $especieDocCodigo = $boleto->getEspecieDocCodigo('A', 400);
         // Boleto Proposta (especie "O") nao admite QrCode - o titulo seria registrado como boleto comum e o QrCode sumiria sem aviso (itens 5.3 e 11 do manual); falha explicitamente em vez de degradar em silencio.
+        // Como depende de $hibrido, so dispara no cadastro, que e o que o item 5.3 proibe ("nao sera registrada para boletos Hibridos"). Baixar ou alterar um boleto proposta e operacao legitima e segue permitido.
         if ($hibrido && $especieDocCodigo == self::ESPECIE_BOLETO_PROPOSTA) {
             throw new ValidationException('O Sicredi nao emite boleto hibrido (QrCode PIX) para a especie de documento "O - Boleto Proposta". Utilize outra especie de documento ou desligue o boleto hibrido (setPixHibrido(false)).');
         }
@@ -190,19 +207,7 @@ class Sicredi extends AbstractRemessa implements RemessaContract
         $this->add(83, 92, Util::formatCnab('9', 0, 10, 2));
         $this->add(93, 96, Util::formatCnab('9', $boleto->getMulta(), 4, 2));
         $this->add(97, 108, '');
-        $this->add(109, 110, self::OCORRENCIA_REMESSA); // REGISTRO
-        if ($boleto->getStatus() == $boleto::STATUS_BAIXA) {
-            $this->add(109, 110, self::OCORRENCIA_BAIXA); // BAIXA
-        }
-        if ($boleto->getStatus() == $boleto::STATUS_ALTERACAO) {
-            $this->add(109, 110, self::OCORRENCIA_ALT_OUTROS_DADOS); // ALTERAR OUTROS DADOS (Endereço, etc.)
-        }
-        if ($boleto->getStatus() == $boleto::STATUS_ALTERACAO_DATA) {
-            $this->add(109, 110, self::OCORRENCIA_ALT_VENCIMENTO); // ALTERAR VENCIMENTO
-        }
-        if ($boleto->getStatus() == $boleto::STATUS_CUSTOM) {
-            $this->add(109, 110, sprintf('%2.02s', $boleto->getComando()));
-        }
+        $this->add(109, 110, $ocorrencia);
         // Campo "Seu Número" (111-120): grava o numeroControle (control_number), pois é o campo que o banco devolve no retorno (posição 117-126) e que o parser lê como numeroControle para vincular a fatura. O ID da remessa segue no header (idremessa). Demais bancos gravam getNumeroControle() no campo de controle; o Sicredi era o único gravando getNumeroDocumento() aqui.
         $this->add(111, 120, Util::formatCnab('X', $boleto->getNumeroControle(), 10));
         $this->add(121, 126, $boleto->getDataVencimento()->format('dmy'));

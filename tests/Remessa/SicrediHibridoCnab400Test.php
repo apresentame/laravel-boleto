@@ -265,6 +265,102 @@ class SicrediHibridoCnab400Test extends TestCase
         $this->assertEquals('8', $linhas[2][0]);
     }
 
+    /**
+     * O registro tipo 8 é da emissão (item 8.7) e o manual não tem instrução que ligue ou desligue
+     * QrCode depois do cadastro: a tabela 7.1 não prevê, o complemento da instrução 31 (A-G) não
+     * inclui PIX, e o Sicredi só reporta status de QrCode (motivos P1/P2) na ocorrência 2.
+     * Numa baixa ou alteração, "H" e registro tipo 8 são ruído que o banco não tem como responder.
+     *
+     * @return array
+     */
+    public static function instrucoesQueNaoEmitemQrCode()
+    {
+        return [
+            'pedido de baixa'         => ['baixarBoleto', '02'],
+            'alteração de vencimento' => ['alterarDataDeVencimento', '06'],
+        ];
+    }
+
+    /**
+     * @dataProvider instrucoesQueNaoEmitemQrCode
+     *
+     * @param string $metodo
+     * @param string $ocorrenciaEsperada
+     */
+    public function testHibridoNaoVaiEmInstrucaoQueNaoEmiteBoleto($metodo, $ocorrenciaEsperada)
+    {
+        $boleto = $this->boleto(['pixHibrido' => true]);
+        $boleto->{$metodo}();
+
+        $linhas = $this->linhasRemessa($boleto);
+
+        $this->assertCount(3, $linhas, 'Header + detalhe + trailer, sem registro tipo 8');
+        $this->assertNotContains('8', array_map(function ($linha) {
+            return $linha[0];
+        }, $linhas), 'Nenhuma linha pode ser registro tipo 8');
+
+        $detalhe = $linhas[1];
+        $this->assertEquals($ocorrenciaEsperada, $this->campo($detalhe, 109, 110), 'Código de ocorrência');
+        $this->assertEquals(' ', $this->campo($detalhe, 6, 6), 'Posição 006 deve ficar em branco');
+
+        // O tipo 8 que deixou de existir não pode deixar buraco na contagem
+        $this->assertEquals('000001', $this->campo($linhas[0], 395, 400));
+        $this->assertEquals('000002', $this->campo($detalhe, 395, 400));
+        $this->assertEquals('000003', $this->campo($linhas[2], 395, 400), 'Total do trailer');
+        $this->assertEquals(400, strlen($detalhe));
+    }
+
+    public function testHibridoSegueValendoEmInstrucaoCustomDeCadastro()
+    {
+        // comandarInstrucao('01') é um cadastro de título comandado na mão; o gate é pela ocorrência gravada, não pelo status, justamente para o QrCode não se perder aqui
+        $boleto = $this->boleto(['pixHibrido' => true]);
+        $boleto->comandarInstrucao('01');
+
+        $linhas = $this->linhasRemessa($boleto);
+
+        $this->assertCount(4, $linhas);
+        $this->assertEquals('01', $this->campo($linhas[1], 109, 110));
+        $this->assertEquals('H', $this->campo($linhas[1], 6, 6));
+        $this->assertEquals('8', $linhas[2][0], 'Registro tipo 8 presente');
+    }
+
+    public function testEspecieBoletoPropostaSoEhBloqueadaNoCadastro()
+    {
+        // O item 5.3 proíbe "registrar" boleto proposta como híbrido; baixar um boleto proposta é operação legítima e não pode ser bloqueada
+        $boleto = $this->boletoProposta();
+        $boleto->baixarBoleto();
+
+        $linhas = $this->linhasRemessa($boleto);
+
+        $this->assertCount(3, $linhas);
+        $this->assertEquals('02', $this->campo($linhas[1], 109, 110));
+        $this->assertEquals(' ', $this->campo($linhas[1], 6, 6));
+    }
+
+    /**
+     * LIMITAÇÃO CONHECIDA, não comportamento desejado.
+     *
+     * O layout CNAB 400 do Sicredi não transporta alteração de valor: a tabela 7.1 não tem essa
+     * instrução, ela não está entre os códigos aceitos em 109-110, e o complemento da instrução 31
+     * (posição 071, códigos A-G) não inclui valor. A lib não trata STATUS_ALTERACAO_VALOR em 21 dos
+     * 23 bancos CNAB 400 (só o Itaú trata), então o status cai no default e sai como cadastro (01).
+     *
+     * Este teste fixa o comportamento atual para que uma mudança futura seja deliberada, e NÃO
+     * afirma que o arquivo gerado está correto - ele não está.
+     */
+    public function testAlterarValorCaiComoCadastroPorFaltaDeInstrucaoNoLayout()
+    {
+        $boleto = $this->boleto(['pixHibrido' => true]);
+        $boleto->alterarValor();
+
+        $linhas = $this->linhasRemessa($boleto);
+
+        $this->assertEquals('01', $this->campo($linhas[1], 109, 110), 'Limitação conhecida: vira cadastro');
+        // Sendo gravado como cadastro, o híbrido acompanha - o gate é coerente com a ocorrência que de fato foi para o arquivo
+        $this->assertEquals('H', $this->campo($linhas[1], 6, 6));
+        $this->assertEquals('8', $linhas[2][0]);
+    }
+
     public function testSemHibridoGeraArquivoIdenticoAoDeHoje()
     {
         $arquivoOuro = implode(DIRECTORY_SEPARATOR, [__DIR__, 'files', 'sicredi', 'remessa_cnab400_sem_hibrido.txt']);
@@ -277,12 +373,15 @@ class SicrediHibridoCnab400Test extends TestCase
         $this->assertSame(file_get_contents($arquivoOuro), $remessa->gerar());
     }
 
-    public function testHibridoRejeitaBoletoProposta()
+    /**
+     * O mapa de espécies do boleto Sicredi ainda não expõe "O - Boleto Proposta"; a subclasse força
+     * o código resolvido para exercitar a guarda dos itens 5.3 e 11 do manual.
+     *
+     * @return BoletoSicrediBoletoProposta
+     */
+    private function boletoProposta()
     {
-        $this->expectException(ValidationException::class);
-
-        // O mapa de espécies do boleto Sicredi ainda não expõe "O - Boleto Proposta"; a subclasse força o código resolvido para exercitar a guarda dos itens 5.3 e 11 do manual
-        $boleto = new BoletoSicrediBoletoProposta([
+        return new BoletoSicrediBoletoProposta([
             'dataVencimento'    => Carbon::create(2021, 12, 18, 0, 0, 0),
             'dataDocumento'     => Carbon::create(2021, 10, 20, 0, 0, 0),
             'dataProcessamento' => Carbon::create(2021, 10, 28, 0, 0, 0),
@@ -301,8 +400,13 @@ class SicrediHibridoCnab400Test extends TestCase
             'aceite'            => 'S',
             'pixHibrido'        => true,
         ]);
+    }
 
-        $this->linhasRemessa($boleto);
+    public function testHibridoRejeitaBoletoPropostaNoCadastro()
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->linhasRemessa($this->boletoProposta());
     }
 }
 
