@@ -129,6 +129,11 @@ class Detalhe implements DetalheContract
     protected $pixLocation;
 
     /**
+     * @var
+     */
+    protected $pixTxid;
+
+    /**
      * @var string
      */
     protected $error;
@@ -712,6 +717,27 @@ class Detalhe implements DetalheContract
     public function setPixLocation($pixLocation)
     {
         $this->pixLocation = $pixLocation;
+
+        return $this;
+    }
+
+    /**
+     * Identificador da cobrança PIX (TXID) gerado pelo banco, quando o retorno o informa
+     *
+     * @return mixed
+     */
+    public function getPixTxid()
+    {
+        return $this->pixTxid;
+    }
+
+    /**
+     * @param mixed $pixTxid
+     * @return Detalhe
+     */
+    public function setPixTxid($pixTxid)
+    {
+        $this->pixTxid = $pixTxid;
 
         return $this;
     }
