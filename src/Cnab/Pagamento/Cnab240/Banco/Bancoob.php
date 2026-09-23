@@ -55,6 +55,11 @@ class Bancoob extends AbstractPagamento implements PagamentoRemessaContract
     const FORMA_LANCAMENTO_PIX_QRCODE = '47';
     const FORMA_LANCAMENTO = self::FORMA_LANCAMENTO_TED_OUTRA_TITULARIDADE; // default histórico
 
+    // Chave de lote (agruparPagamentosPorTipo) para favorecido cuja conta de destino também é
+    // no Sicoob. G029 (pág. 40) não aceita código de TED (41/43) nesse caso — é crédito interno
+    // à cooperativa, domínio 01. Ver getTipoPagamentoDoPagamento() e getFormaLancamentoLote().
+    const TIPO_PAGAMENTO_TED_MESMO_BANCO = 'TED_MESMO_BANCO';
+
     // Constantes para trailer do lote
     const TIPO_REGISTRO_TRAILER_LOTE = '5'; // Tipo de registro (trailer do lote)
     const QUANTIDADE_MOEDA_ZERO = 0; // Quantidade de moeda (geralmente 0 para pagamentos)
@@ -145,6 +150,18 @@ class Bancoob extends AbstractPagamento implements PagamentoRemessaContract
      * @var string
      */
     protected $formaLancamento = self::FORMA_LANCAMENTO;
+
+    /**
+     * Tipo/chave do lote atualmente em processamento (campo 'tipo' de $lote em headerLoteMulti()).
+     *
+     * gerar() (AbstractPagamento) monta um lote por vez: chama headerLoteMulti($lote), que grava
+     * aqui a chave, e só depois gera os segmentos dos pagamentos daquele lote. getFormaLancamentoLote()
+     * e isTed() leem esta propriedade para saber qual lote está sendo montado no momento em que os
+     * segmentos A/B são gerados.
+     *
+     * @var string|null
+     */
+    protected $loteAtualTipo;
 
     /**
      * Código de finalidade da TED (campo 26.3A, P011).
@@ -434,16 +451,59 @@ class Bancoob extends AbstractPagamento implements PagamentoRemessaContract
     }
 
     /**
-     * Indica se a forma de lançamento corrente é uma TED.
+     * Retorna a Forma de Lançamento a gravar no lote que está sendo montado agora (campo 06.1,
+     * G029, pág. 40).
+     *
+     * O lote de favorecidos do próprio Sicoob (TIPO_PAGAMENTO_TED_MESMO_BANCO, ver
+     * getTipoPagamentoDoPagamento()) sempre sai como 01 — crédito interno à cooperativa não é
+     * TED e o domínio do G029 recusa 41/43 nesse caso. Os demais lotes seguem o valor
+     * configurado via setFormaLancamento()/$formaLancamento, como antes desta separação.
+     *
+     * @return string
+     */
+    protected function getFormaLancamentoLote()
+    {
+        return $this->loteAtualTipo === self::TIPO_PAGAMENTO_TED_MESMO_BANCO
+            ? self::FORMA_LANCAMENTO_CREDITO_CONTA_CORRENTE
+            : $this->getFormaLancamento();
+    }
+
+    /**
+     * Indica se a forma de lançamento do lote corrente é uma TED.
      *
      * @return bool
      */
     protected function isTed()
     {
-        return in_array($this->getFormaLancamento(), [
+        return in_array($this->getFormaLancamentoLote(), [
             self::FORMA_LANCAMENTO_TED_OUTRA_TITULARIDADE,
             self::FORMA_LANCAMENTO_TED_MESMA_TITULARIDADE,
         ], true);
+    }
+
+    /**
+     * Separa, num lote próprio, os favorecidos cuja conta de destino também é no Sicoob (756).
+     *
+     * A aplicação consumidora só informa o tipo de pagamento (TED, PIX, Boleto) via
+     * setTipoPagamento() — não sabe, e não precisa saber, que o Sicoob exige um código de
+     * lançamento diferente quando o crédito é interno à cooperativa. getCodigoBanco() do
+     * favorecido já chega preenchido em todo pagamento (ver Cnab\Pagamento\AbstractPagamento::
+     * setCodigoBanco()), então a lib resolve isso sozinha: TED cujo favorecido também está no
+     * 756 vira a chave TIPO_PAGAMENTO_TED_MESMO_BANCO, que agruparPagamentosPorTipo() (herdado)
+     * já isola num lote separado. getFormaLancamentoLote() lê essa chave para decidir 01 x 41/43.
+     *
+     * @param \Eduardokum\LaravelBoleto\Pagamento\Banco\Banco $pagamento
+     * @return string
+     */
+    protected function getTipoPagamentoDoPagamento(\Eduardokum\LaravelBoleto\Pagamento\Banco\Banco $pagamento)
+    {
+        $tipoPagamento = parent::getTipoPagamentoDoPagamento($pagamento);
+
+        if ($tipoPagamento === 'TED' && (string) $pagamento->getCodigoBanco() === self::BANCO) {
+            return self::TIPO_PAGAMENTO_TED_MESMO_BANCO;
+        }
+
+        return $tipoPagamento;
     }
 
     /**
@@ -728,13 +788,14 @@ class Bancoob extends AbstractPagamento implements PagamentoRemessaContract
     {
         $this->iniciaHeaderLote();
         $this->loteAtual = Util::formatCnab('9L', $lote['numero'], 4);
+        $this->loteAtualTipo = $lote['tipo'];
 
         $this->add(1, 3, self::BANCO); // 01.1 Banco - Código do Banco na Compensação
         $this->add(4, 7, $this->loteAtual); // 02.1 Controle Lote - Lote de Serviço (número do lote)
         $this->add(8, 8, self::TIPO_REGISTRO_HEADER_LOTE); // 03.1 Registro - Tipo de Registro
         $this->add(9, 9, self::TIPO_OPERACAO); // 04.1 Operação - Tipo da Operação
         $this->add(10, 11, $this->getTipoServico()); // 05.1 Serviço - Tipo do Serviço
-        $this->add(12, 13, $this->getFormaLancamento()); // 06.1 Serviço - Forma Lançamento
+        $this->add(12, 13, $this->getFormaLancamentoLote()); // 06.1 Serviço - Forma Lançamento
         $this->add(14, 16, self::VERSAO_LAYOUT_LOTE); // 07.1 Layout do Lote - Nº da Versão do Layout do Lote
         $this->add(17, 17, self::CAMPO_BRANCO); // 08.1 CNAB - Uso Exclusivo da FEBRABAN/CNAB
         $this->add(18, 18, $this->getPagador()->getTipoDocumento() == 'CPF' ? self::TIPO_DOCUMENTO_CPF : self::TIPO_DOCUMENTO_CNPJ); // 09.1 Inscrição Tipo - Tipo de Inscrição da Empresa
