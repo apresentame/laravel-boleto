@@ -27,6 +27,16 @@ class FakeRetorno
     const BANKS = ['001' => 'Banco do Brasil', '341' => 'Itaú', '077' => 'Inter', '104' => 'Caixa', '033' => 'Santander', '748' => 'Sicredi', '756' => 'Bancoob', '041' => 'Banrisul', '085' => 'Ailos', '237' => 'Bradesco', '336' => 'C6 Bank', '133' => 'Cresol'];
 
     /**
+     * Faixas [início, fim] lidas no segmento P da remessa e gravadas no segmento T do retorno
+     * (padrão FEBRABAN). Banco que diverge sobrescreve só o campo necessário em 'fields' do profile;
+     * 'alphanumeric' grava o conteúdo alinhado à esquerda em vez de zero-filled.
+     */
+    const CNAB240_FIELDS = [
+        'nossoNumero' => ['remittance' => [38, 57], 'return' => [38, 57], 'alphanumeric' => true],
+        'documentNumber' => ['remittance' => [63, 77], 'return' => [59, 73], 'alphanumeric' => false],
+    ];
+
+    /**
      * @param string      $bankCode    Código do banco (ex.: '001')
      * @param string|int  $layout      Layout CNAB ('240' ou '400')
      * @param string      $remittanceFile Caminho do arquivo de remessa gerado
@@ -169,6 +179,31 @@ class FakeRetorno
                     'defaultRejectionReason' => '63',
                 ],
             ],
+            // Ocorrências, liquidação e rejeição direto de Cnab\Retorno\Cnab240\Banco\Caixa::processarDetalhe().
+            // Nosso número e número do documento mudam de faixa entre o segmento P
+            // (Cnab\Remessa\Cnab240\Banco\Caixa::segmentoP) e o segmento T lido pelo parser.
+            '104' => [
+                '240' => [
+                    'bank'   => '104',
+                    'layout' => '240',
+                    'occurrences' => [
+                        'confirm' => '02', // Entrada Confirmada
+                        'pay'     => '06', // Liquidação
+                        'cancel'  => '09', // Baixa
+                        'reject'  => '03', // Entrada Rejeitada
+                        'change'  => '14', // Confirmação Recebimento Instrução Alteração de Vencimento
+                    ],
+                    'settlement' => ['06', '46'],
+                    'rejection'  => ['03', '26', '30'],
+                    'defaultRejectionReason' => '63', // Entrada para Título já Cadastrado
+                    // O parser calcula a tarifa como valor pago (U 78-92) menos valor líquido (U 93-107): sem o líquido a tarifa vira o valor inteiro
+                    'settlementNetAmount' => true,
+                    'fields' => [
+                        'nossoNumero' => ['remittance' => [40, 57], 'return' => [39, 56]],
+                        'documentNumber' => ['remittance' => [63, 73], 'return' => [59, 69], 'alphanumeric' => true],
+                    ],
+                ],
+            ],
         ];
 
         if (!isset($profiles[$bank][$layout])) {
@@ -185,6 +220,7 @@ class FakeRetorno
     private static function cnab240(array $profile, array $lines, $spec)
     {
         $bank       = $profile['bank'];
+        $fields     = array_replace_recursive(self::CNAB240_FIELDS, $profile['fields'] ?? []);
         $fileHeader  = null;
         $batchHeader = null;
         $titles      = [];
@@ -205,9 +241,9 @@ class FakeRetorno
                         $titles[] = $current;
                     }
                     $current = [
-                        'nossoNumero'    => self::field($line, 38, 57),
+                        'nossoNumero'    => self::field($line, ...$fields['nossoNumero']['remittance']),
                         'wallet'         => self::field($line, 58, 58) ?: '1',
-                        'documentNumber' => self::field($line, 63, 77),
+                        'documentNumber' => self::field($line, ...$fields['documentNumber']['remittance']),
                         'dueDate'        => self::field($line, 78, 85),
                         'value'          => self::field($line, 86, 100),
                         'control'        => self::field($line, 196, 220),
@@ -245,9 +281,9 @@ class FakeRetorno
                 [9, 13, self::num($seq, 5)],
                 [14, 14, 'T'],
                 [16, 17, $occurrence],
-                [38, 57, str_pad($t['nossoNumero'], 20, ' ', STR_PAD_RIGHT)],
+                [...$fields['nossoNumero']['return'], self::cnab240Value($t['nossoNumero'], $fields['nossoNumero'])],
                 [58, 58, $t['wallet']],
-                [59, 73, self::num($t['documentNumber'], 15)],
+                [...$fields['documentNumber']['return'], self::cnab240Value($t['documentNumber'], $fields['documentNumber'])],
                 [74, 81, $t['dueDate'] ?: $today],
                 [82, 96, self::num($t['value'], 15)],
                 [106, 130, str_pad($t['control'], 25, ' ', STR_PAD_RIGHT)],
@@ -266,7 +302,7 @@ class FakeRetorno
                 [48, 62, self::num(0, 15)],
                 [63, 77, self::num(0, 15)],
                 [78, 92, self::num($isSettlement ? $t['value'] : 0, 15)],
-                [93, 107, self::num(0, 15)],
+                [93, 107, self::num($isSettlement && !empty($profile['settlementNetAmount']) ? $t['value'] : 0, 15)], // valor líquido = pago (tarifa zero)
                 [108, 122, self::num(0, 15)],
                 [123, 137, self::num(0, 15)],
                 [138, 145, $isSettlement ? $today : self::num(0, 8)],
@@ -641,6 +677,14 @@ class FakeRetorno
         $value = preg_replace('/\D/', '', (string) $value);
         $value = $value === '' ? '0' : $value;
         return str_pad(substr($value, -$len), $len, '0', STR_PAD_LEFT);
+    }
+
+    /** Formata o valor na faixa de retorno do campo CNAB240: alinhado à esquerda ou zero-filled. */
+    private static function cnab240Value($value, array $field)
+    {
+        $len = $field['return'][1] - $field['return'][0] + 1;
+
+        return $field['alphanumeric'] ? str_pad($value, $len, ' ', STR_PAD_RIGHT) : self::num($value, $len);
     }
 
     /** Linha vazia de 240 chars com banco (1-3) e tipo de registro (pos 8) setados. */
